@@ -5,7 +5,7 @@
 
     <groupId>io.lumoauth</groupId>
     <artifactId>lumo-auth-parent</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
 
     <name>LumoAuth Java SDK (parent)</name>
@@ -237,6 +237,27 @@
                             </execution>
                         </executions>
                     </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!--
+          Uploads the reactor to the Central Portal as one deployment (autoPublish=false: release
+          it from the portal UI after validation). Kept apart from `release` because, as an
+          extension, this plugin replaces maven-deploy-plugin, which would make the bundle route
+          (-DaltDeploymentRepository=file:...) a no-op. Use: mvn -P release,central deploy.
+
+          Maven 3.10+ (Resolver 2) writes local-repository bookkeeping (maven-metadata-local.xml,
+          _remote.repositories, .locks) into the staging tree and Central rejects the bundle
+          (apache/maven#13388). Deploy with:
+            -Daether.priority.VersionsMetadataGeneratorFactory=NaN
+            -Daether.priority.EnhancedLocalRepositoryManagerFactory=NaN
+            -Daether.syncContext.named.factory=rwlock-local
+        -->
+        <profile>
+            <id>central</id>
+            <build>
+                <plugins>
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
