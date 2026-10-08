@@ -1,0 +1,37 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        java: ['17', '21']
+    steps:
+      - uses: actions/checkout@v4
+      # The contract lives in a sibling repo; check it out so the routes/errors/vector
+      # conformance tests run instead of skipping.
+      - uses: actions/checkout@v4
+        with:
+          repository: LumoAuth/sdk-contract
+          path: ../sdk-contract
+        continue-on-error: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+      - run: mvn -B -ntp verify
+        env:
+          LUMO_SDK_CONTRACT: ${{ github.workspace }}/../sdk-contract
+      - name: Routes.java is generated from the contract
+        if: hashFiles('../sdk-contract/routes.json') != ''
+        run: |
+          python3 ../sdk-contract/scripts/gen-java-routes.py /tmp/Routes.java
+          diff -u lumo-auth-java/src/main/java/io/lumoauth/Routes.java /tmp/Routes.java
+      - name: Release artifacts build (sources, javadoc)
+        if: matrix.java == '17'
+        run: mvn -B -ntp -P release -Dgpg.skip=true -DskipTests package

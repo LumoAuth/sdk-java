@@ -1,0 +1,4 @@
+io.lumoauth.spring.LumoAuthAutoConfiguration
+io.lumoauth.spring.LumoAuthSecurityAutoConfiguration
+io.lumoauth.spring.LumoAuthLoginAutoConfiguration
+io.lumoauth.spring.LumoAuthHealthAutoConfiguration
