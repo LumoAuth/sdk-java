@@ -11,10 +11,10 @@ jobs:
       matrix:
         java: ['17', '21']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The contract lives in a sibling repo; check it out so the routes/errors/vector
       # conformance tests run instead of skipping.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: LumoAuth/sdk-contract
           path: ../sdk-contract
