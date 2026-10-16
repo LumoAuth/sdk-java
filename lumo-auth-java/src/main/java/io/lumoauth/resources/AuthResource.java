@@ -26,7 +26,14 @@ import java.util.Map;
 public final class AuthResource {
 
     public static final String GRANT_TYPE_TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
+    /** RFC 8693 token type: an opaque or at+jwt access token issued by the organization (the default). */
     public static final String TOKEN_TYPE_ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token";
+    /** RFC 8693 token type: an at+jwt access token, or an external workload identity token presented by a registered agent. */
+    public static final String TOKEN_TYPE_JWT = "urn:ietf:params:oauth:token-type:jwt";
+    /** RFC 8693 token type: an OpenID Connect ID token issued by the organization to the exchanging client. */
+    public static final String TOKEN_TYPE_ID_TOKEN = "urn:ietf:params:oauth:token-type:id_token";
+    /** RFC 8693 token type: a refresh token issued to the exchanging client. */
+    public static final String TOKEN_TYPE_REFRESH_TOKEN = "urn:ietf:params:oauth:token-type:refresh_token";
 
     private final HttpTransport http;
 
@@ -124,10 +131,10 @@ public final class AuthResource {
         Map<String, String> form = new LinkedHashMap<>();
         form.put("grant_type", GRANT_TYPE_TOKEN_EXCHANGE);
         form.put("subject_token", params.subjectToken());
-        form.put("subject_token_type", TOKEN_TYPE_ACCESS_TOKEN);
+        form.put("subject_token_type", isBlank(params.subjectTokenType()) ? TOKEN_TYPE_ACCESS_TOKEN : params.subjectTokenType());
         if (!isBlank(params.actorToken())) {
             form.put("actor_token", params.actorToken());
-            form.put("actor_token_type", TOKEN_TYPE_ACCESS_TOKEN);
+            form.put("actor_token_type", isBlank(params.actorTokenType()) ? TOKEN_TYPE_ACCESS_TOKEN : params.actorTokenType());
         }
         putIfPresent(form, "audience", params.audience());
         if (!params.scopes().isEmpty()) {

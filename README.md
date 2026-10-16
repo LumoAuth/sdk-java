@@ -342,6 +342,8 @@ try (JitContext jit = new JitContext(agent)) {
 
 Chain of agency over RFC 8693 token exchange. The user consents once; the agent then holds a token that says who it is *and* who it acts for, and can hand a narrower token to a sub-agent.
 
+The lower-level `lumo.auth().tokenExchange(TokenExchangeRequest)` declares what it exchanges through `subjectTokenType(…)` / `actorTokenType(…)`: `AuthResource.TOKEN_TYPE_ACCESS_TOKEN` (the default), `TOKEN_TYPE_JWT` (an at+jwt access token or an external workload JWT), `TOKEN_TYPE_ID_TOKEN` (an OpenID Connect ID token) or `TOKEN_TYPE_REFRESH_TOKEN`. The server refuses a token that does not match its declared type.
+
 ```java
 DelegationChain chain = new DelegationChain(agent, "https://agent.example.com/callback");
 

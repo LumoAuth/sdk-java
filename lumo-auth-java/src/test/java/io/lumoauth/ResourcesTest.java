@@ -22,6 +22,7 @@ import io.lumoauth.model.RegisterAgentRequest;
 import io.lumoauth.model.RevokeRequest;
 import io.lumoauth.model.TaskResult;
 import io.lumoauth.model.TokenExchangeRequest;
+import io.lumoauth.resources.AuthResource;
 import io.lumoauth.model.UserInfo;
 import io.lumoauth.model.WaitOptions;
 import io.lumoauth.model.ZanzibarUsersetNode;
@@ -146,7 +147,12 @@ class ResourcesTest {
         assertThat(server.last().form()).containsEntry("grant_type", "refresh_token").containsEntry("scope", "a");
         assertThat(lumo.auth().tokenExchange(TokenExchangeRequest.of("S").actorToken("ACT").audience("urn:mcp:x").scopes(List.of("r"))).accessToken()).isEqualTo("A");
         assertThat(server.last().form()).containsEntry("subject_token", "S").containsEntry("actor_token", "ACT")
+            .containsEntry("subject_token_type", "urn:ietf:params:oauth:token-type:access_token")
             .containsEntry("actor_token_type", "urn:ietf:params:oauth:token-type:access_token").containsEntry("audience", "urn:mcp:x");
+        // An ID token (or workload JWT) is declared as such; the actor default stays access_token.
+        lumo.auth().tokenExchange(TokenExchangeRequest.of("ID").subjectTokenType(AuthResource.TOKEN_TYPE_ID_TOKEN).actorToken("ACT"));
+        assertThat(server.last().form()).containsEntry("subject_token_type", "urn:ietf:params:oauth:token-type:id_token")
+            .containsEntry("actor_token_type", "urn:ietf:params:oauth:token-type:access_token");
         assertThatThrownBy(() -> lumo.auth().clientCredentials("", "s")).isInstanceOf(LumoAuthValidationException.class);
 
         server.on("/orgs/acme/api/v1/oauth/revoke", Reply.empty(200));
