@@ -56,20 +56,31 @@ public final class DelegationResource {
 
     /**
      * Combines a subject token (the user) with an actor token (the agent) into a
-     * delegated token whose {@code act} claim records the chain.
+     * delegated token whose {@code act} claim records the chain. The token is bound
+     * to the acting agent; use {@link #exchangeForResource} to bind it to the API it
+     * will be sent to.
      */
     public TokenResponse exchange(String subjectToken, String actorToken, String... scopes) {
         return exchange(subjectToken, actorToken, scopes == null ? List.of() : Arrays.asList(scopes));
     }
 
     public TokenResponse exchange(String subjectToken, String actorToken, List<String> scopes) {
+        return exchangeForResource(subjectToken, actorToken, null, scopes);
+    }
+
+    /**
+     * {@link #exchange} with an RFC 8707 resource indicator: the https URL in {@code resource}
+     * becomes the delegated token's {@code aud}.
+     */
+    public TokenResponse exchangeForResource(String subjectToken, String actorToken, String resource, List<String> scopes) {
         if (subjectToken == null || subjectToken.isBlank()) {
             throw new LumoAuthValidationException("a subject token is required");
         }
         if (actorToken == null || actorToken.isBlank()) {
             throw new LumoAuthValidationException("an actor token is required");
         }
-        return auth.tokenExchange(TokenExchangeRequest.of(subjectToken).actorToken(actorToken).scopes(scopes));
+        return auth.tokenExchange(
+            TokenExchangeRequest.of(subjectToken).actorToken(actorToken).scopes(scopes).resource(resource));
     }
 
     /** Invalidates a delegation's refresh token, and with it every token derived from it. */

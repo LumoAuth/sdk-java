@@ -195,7 +195,9 @@ ZanzibarUsersetNode tree = lumo.zanzibar().expand("document:readme", "viewer");
 
 // ABAC: does policy allow this action given attributes and context?
 AbacDecision decision = lumo.abac().check(
-    AbacCheck.of("document", "read", "doc-123").context(Map.of("ip", clientIp)));
+    // ip / userAgent / requestMethod / requestPath describe the request LumoAuth received;
+    // forward the end user's values under "pep" (policies read pep.ip).
+    AbacCheck.of("document", "read", "doc-123").context(Map.of("pep", Map.of("ip", clientIp))));
 if (!decision.allowed()) {
     log.info("denied: {} ({})", decision.reason(), decision.matchedPolicies());
 }
@@ -342,7 +344,7 @@ try (JitContext jit = new JitContext(agent)) {
 
 Chain of agency over RFC 8693 token exchange. The user consents once; the agent then holds a token that says who it is *and* who it acts for, and can hand a narrower token to a sub-agent.
 
-The lower-level `lumo.auth().tokenExchange(TokenExchangeRequest)` declares what it exchanges through `subjectTokenType(…)` / `actorTokenType(…)`: `AuthResource.TOKEN_TYPE_ACCESS_TOKEN` (the default), `TOKEN_TYPE_JWT` (an at+jwt access token or an external workload JWT), `TOKEN_TYPE_ID_TOKEN` (an OpenID Connect ID token) or `TOKEN_TYPE_REFRESH_TOKEN`. The server refuses a token that does not match its declared type.
+The lower-level `lumo.auth().tokenExchange(TokenExchangeRequest)` declares what it exchanges through `subjectTokenType(…)` / `actorTokenType(…)`: `AuthResource.TOKEN_TYPE_ACCESS_TOKEN` (the default), `TOKEN_TYPE_JWT` (an at+jwt access token or an external workload JWT), `TOKEN_TYPE_ID_TOKEN` (an OpenID Connect ID token) or `TOKEN_TYPE_REFRESH_TOKEN` (not accepted as the subject when an agent acts on a user's behalf). The server refuses a token that does not match its declared type. `resource(…)` (or `lumo.delegation().exchangeForResource(…)`) sets the RFC 8707 resource indicator, an https URL that becomes the token's `aud`; without it an on-behalf-of token is bound to the agent's own id, and LumoAuth does not bind `aud` from `audience(…)`.
 
 ```java
 DelegationChain chain = new DelegationChain(agent, "https://agent.example.com/callback");

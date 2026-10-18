@@ -148,7 +148,11 @@ class ResourcesTest {
         assertThat(lumo.auth().tokenExchange(TokenExchangeRequest.of("S").actorToken("ACT").audience("urn:mcp:x").scopes(List.of("r"))).accessToken()).isEqualTo("A");
         assertThat(server.last().form()).containsEntry("subject_token", "S").containsEntry("actor_token", "ACT")
             .containsEntry("subject_token_type", "urn:ietf:params:oauth:token-type:access_token")
-            .containsEntry("actor_token_type", "urn:ietf:params:oauth:token-type:access_token").containsEntry("audience", "urn:mcp:x");
+            .containsEntry("actor_token_type", "urn:ietf:params:oauth:token-type:access_token").containsEntry("audience", "urn:mcp:x")
+            .doesNotContainKey("resource");
+        // The RFC 8707 resource indicator binds the delegated token's aud.
+        lumo.delegation().exchangeForResource("S", "ACT", "https://api.example.com", List.of("r"));
+        assertThat(server.last().form()).containsEntry("resource", "https://api.example.com").containsEntry("scope", "r");
         // An ID token (or workload JWT) is declared as such; the actor default stays access_token.
         lumo.auth().tokenExchange(TokenExchangeRequest.of("ID").subjectTokenType(AuthResource.TOKEN_TYPE_ID_TOKEN).actorToken("ACT"));
         assertThat(server.last().form()).containsEntry("subject_token_type", "urn:ietf:params:oauth:token-type:id_token")

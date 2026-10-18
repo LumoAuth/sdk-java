@@ -32,7 +32,10 @@ public final class AuthResource {
     public static final String TOKEN_TYPE_JWT = "urn:ietf:params:oauth:token-type:jwt";
     /** RFC 8693 token type: an OpenID Connect ID token issued by the organization to the exchanging client. */
     public static final String TOKEN_TYPE_ID_TOKEN = "urn:ietf:params:oauth:token-type:id_token";
-    /** RFC 8693 token type: a refresh token issued to the exchanging client. */
+    /**
+     * RFC 8693 token type: a refresh token issued to the exchanging client. Refused as the subject when an agent acts
+     * on a user's behalf (the actor token is an agent access token): 400 invalid_request.
+     */
     public static final String TOKEN_TYPE_REFRESH_TOKEN = "urn:ietf:params:oauth:token-type:refresh_token";
 
     private final HttpTransport http;
@@ -137,6 +140,7 @@ public final class AuthResource {
             form.put("actor_token_type", isBlank(params.actorTokenType()) ? TOKEN_TYPE_ACCESS_TOKEN : params.actorTokenType());
         }
         putIfPresent(form, "audience", params.audience());
+        putIfPresent(form, "resource", params.resource());
         if (!params.scopes().isEmpty()) {
             form.put("scope", Models.joinScopes(params.scopes()));
         }
