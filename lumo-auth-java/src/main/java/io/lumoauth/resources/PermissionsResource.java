@@ -25,6 +25,11 @@ import java.util.Map;
  * boolean ok = lumo.permissions().check("document.edit");
  * boolean ok = lumo.permissions().check("document.edit", CheckOptions.forUser(userId));
  * }</pre>
+ *
+ * <p>{@link CheckOptions#forUser} and {@link CheckOptions#forAgent} ask about another
+ * subject. That needs the {@code authz:check} scope (an API key can hold it) or the
+ * {@code authz.check} permission; the server answers 403 {@code INSUFFICIENT_PERMISSIONS}
+ * without it and 404 {@code SUBJECT_NOT_FOUND} for an id outside the organization.
  */
 public final class PermissionsResource {
 
@@ -91,12 +96,17 @@ public final class PermissionsResource {
         return multiCheck(Routes.PERMISSIONS_CHECK_ALL, permissions, options);
     }
 
-    /** Every permission granted to the authenticated principal. */
+    /**
+     * Every permission granted to the authenticated principal. A user access token needs the
+     * {@code authz:read} scope (or the blanket {@code admin} scope). Organization API keys cannot
+     * hold that scope, so with an API key this throws {@link io.lumoauth.errors.LumoAuthPermissionDeniedException}
+     * whose {@code requiredScopes()} is {@code ["authz:read"]}.
+     */
     public PermissionList list() {
         return http.call(Routes.PERMISSIONS_LIST, null, null, PermissionList.class);
     }
 
-    /** Just the permission slugs granted to the principal. */
+    /** Just the permission slugs granted to the principal. Needs the same {@code authz:read} scope as {@link #list()}. */
     public List<String> listSlugs() {
         return list().slugs();
     }
@@ -122,8 +132,12 @@ public final class PermissionsResource {
         if (!options.context().isEmpty()) {
             body.put("context", options.context());
         }
+        // The server reads the checked subject from `subject` only; a top-level
+        // `user_id` is ignored and would silently check the caller instead.
         if (options.userId() != null) {
-            body.put("user_id", options.userId());
+            body.put("subject", Map.of("type", "user", "id", options.userId()));
+        } else if (options.agentId() != null) {
+            body.put("subject", Map.of("type", "agent", "id", options.agentId()));
         }
         return body;
     }

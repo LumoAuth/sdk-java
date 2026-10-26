@@ -25,10 +25,17 @@ import java.util.Optional;
  * }</pre>
  *
  * When the principal signed in with a LumoAuth bearer token, checks run under
- * that token, so they need no API key. Otherwise they run with the
- * application's API key on behalf of the principal's name (the {@code sub}).
+ * that token, so they need no API key. Otherwise (an OIDC browser login) they run
+ * with the application's API key and name the principal as the checked subject:
+ * the {@code sub} is the LumoAuth user id, and an {@code agent_<id>} sub becomes an
+ * agent subject. That API key needs the {@code authz:check} scope, or its owner the
+ * {@code authz.check} permission; without it every check fails with
+ * {@code LumoAuthPermissionDeniedException} (403 {@code INSUFFICIENT_PERMISSIONS}).
  */
 public class LumoAuthorization {
+
+    /** LumoAuth issues agent tokens and userinfo with {@code sub = "agent_" + agentId}. */
+    private static final String AGENT_SUB_PREFIX = "agent_";
 
     private final LumoAuth lumo;
 
@@ -105,7 +112,15 @@ public class LumoAuthorization {
                 .timeout(lumo.transport().timeout())
                 .build())
             .orElse(lumo);
-        return new Principal(authentication.getName(), client, bearer.isEmpty() ? CheckOptions.forUser(authentication.getName()) : CheckOptions.NONE);
+        return new Principal(authentication.getName(), client, bearer.isEmpty() ? subjectOptions(authentication.getName()) : CheckOptions.NONE);
+    }
+
+    /** The check options that name a principal by its {@code sub}: users by id, agents by {@code agent_<id>}. */
+    static CheckOptions subjectOptions(String sub) {
+        if (sub != null && sub.startsWith(AGENT_SUB_PREFIX) && sub.length() > AGENT_SUB_PREFIX.length()) {
+            return CheckOptions.forAgent(sub.substring(AGENT_SUB_PREFIX.length()));
+        }
+        return CheckOptions.forUser(sub);
     }
 
     /** The current principal, the client to check with, and the options that scope the check to them. */

@@ -10,13 +10,16 @@ import java.util.Map;
  *
  * <pre>{@code
  * AbacCheck.of("document", "read").resourceId("doc-123")
- *     .context(Map.of("environment", Map.of("ip", "10.0.0.1")));
+ *     .context(Map.of("pep", Map.of("ip", endUserIp)));
  * }</pre>
  *
  * @param resourceType the kind of thing being accessed ("document"). Required.
  * @param action       the operation ("read", "delete"). Required.
  * @param resourceId   the specific instance, when there is one.
- * @param context      resource and environment attributes for the evaluation.
+ * @param context      environment attributes for the evaluation, sent to the server as
+ *                     {@code environment}. The server sets {@code ip}, {@code userAgent},
+ *                     {@code requestMethod} and {@code requestPath} itself; values that you pass
+ *                     under those names are kept under {@code pep}.
  */
 public record AbacCheck(String resourceType, String action, String resourceId, Map<String, Object> context) {
 
@@ -56,8 +59,16 @@ public record AbacCheck(String resourceType, String action, String resourceId, M
             body.put("resourceId", resourceId);
         }
         if (!context.isEmpty()) {
-            body.put("context", context);
+            // The check endpoint reads the attributes from `environment` only.
+            body.put("environment", context);
         }
+        return body;
+    }
+
+    /** The wire entry for one item of a bulk check: no environment (the bulk call sends one shared). */
+    public Map<String, Object> toBulkEntry() {
+        Map<String, Object> body = toBody();
+        body.remove("environment");
         return body;
     }
 }

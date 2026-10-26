@@ -78,7 +78,10 @@ public final class JitResource {
         return token;
     }
 
-    /** The permission requests awaiting human approval. */
+    /**
+     * The permission requests awaiting human approval. This is a reviewer call: it takes a browser
+     * session or a user access token with the {@code jit:approve} scope, never an agent credential.
+     */
     public List<JitRequest> pending() {
         // The endpoint returns either a bare array or an envelope with `requests`.
         JsonNode node = http.callNode(Routes.JIT_PENDING, null, null);

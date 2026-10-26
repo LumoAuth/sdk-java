@@ -126,7 +126,11 @@ public final class AuthResource {
         return tokenRequest(form);
     }
 
-    /** An RFC 8693 exchange: the primitive behind delegation and MCP audience scoping. */
+    /**
+     * An RFC 8693 exchange: the primitive behind delegation and MCP audience scoping. The subject must
+     * still be an active principal: a deactivated or blocked user, or a suspended agent, gets
+     * {@code invalid_grant}. A JIT task token is never accepted as the subject.
+     */
     public TokenResponse tokenExchange(TokenExchangeRequest params) {
         if (isBlank(params.subjectToken())) {
             throw new LumoAuthValidationException("subjectToken is required for a token exchange");

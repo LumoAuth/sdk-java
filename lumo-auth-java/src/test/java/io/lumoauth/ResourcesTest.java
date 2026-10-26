@@ -53,7 +53,9 @@ class ResourcesTest {
     void permissions() {
         server.on("/api/v1/authz/check", Reply.json(Map.of("allowed", true, "permission", "doc.edit", "user_id", 42)));
         assertThat(lumo.permissions().check("doc.edit", CheckOptions.forUser("42").context(Map.of("ip", "1.1.1.1")))).isTrue();
-        assertThat(server.last().json()).containsEntry("permission", "doc.edit").containsEntry("user_id", "42")
+        assertThat(server.last().json()).containsEntry("permission", "doc.edit")
+            .containsEntry("subject", Map.of("type", "user", "id", "42"))
+            .doesNotContainKey("user_id")
             .containsEntry("context", Map.of("ip", "1.1.1.1"));
         assertThat(lumo.permissions().checkDetailed("doc.edit", null).userId()).isEqualTo("42");
         assertThat(server.last().json()).containsOnlyKeys("permission");
@@ -61,10 +63,20 @@ class ResourcesTest {
         server.on("/api/v1/authz/check-bulk", Reply.json(Map.of("results", Map.of("a", true, "b", false))));
         assertThat(lumo.permissions().checkBulk(List.of("a", "b")).allowed("a")).isTrue();
         assertThat(lumo.permissions().checkBulk(List.of("a", "b")).allowed("c")).isFalse();
+        lumo.permissions().checkBulk(List.of("a"), CheckOptions.forAgent("agt_1"));
+        assertThat(server.last().json()).containsEntry("subject", Map.of("type", "agent", "id", "agt_1"))
+            .doesNotContainKey("user_id");
         server.on("/api/v1/authz/check-any", Reply.json(Map.of("allowed", true, "permissions", List.of("a"))));
         server.on("/api/v1/authz/check-all", Reply.json(Map.of("allowed", false)));
         assertThat(lumo.permissions().checkAny(List.of("a", "b"))).isTrue();
         assertThat(lumo.permissions().checkAll(List.of("a", "b"))).isFalse();
+        lumo.permissions().checkAny(List.of("a"), CheckOptions.forUser("u-9"));
+        assertThat(server.last().json()).containsEntry("subject", Map.of("type", "user", "id", "u-9"));
+        lumo.permissions().checkAll(List.of("a"), CheckOptions.forUser("u-9"));
+        assertThat(server.last().json()).containsEntry("subject", Map.of("type", "user", "id", "u-9"))
+            .doesNotContainKey("user_id");
+        assertThatThrownBy(() -> new CheckOptions(null, "u", "agt_1")).isInstanceOf(IllegalArgumentException.class);
+        assertThat(CheckOptions.forUser("u").agent("agt_1").userId()).isNull();
         server.on("/api/v1/authz/permissions", Reply.json(Map.of("permissions", List.of(Map.of("slug", "a"), Map.of("slug", "b", "source", "role")), "count", 2)));
         assertThat(lumo.permissions().listSlugs()).containsExactly("a", "b");
         assertThat(lumo.permissions().list().permissions().get(1).source()).isEqualTo("role");
@@ -100,14 +112,27 @@ class ResourcesTest {
         assertThat(decision.allowed()).isFalse();
         assertThat(decision.matchedPolicies().get(0).effect()).isEqualTo("deny");
         assertThat(decision.raw()).containsEntry("resourceType", "document");
-        assertThat(server.last().json()).containsEntry("resourceType", "document").containsEntry("resourceId", "doc-1").containsKey("context");
+        assertThat(server.last().json()).containsEntry("resourceType", "document").containsEntry("resourceId", "doc-1")
+            .containsEntry("environment", Map.of("env", Map.of("ip", "1"))).doesNotContainKey("context");
         assertThat(lumo.abac().isAllowed(AbacCheck.of("document", "read"))).isFalse();
-        assertThat(server.last().json()).doesNotContainKeys("resourceId", "context");
+        assertThat(server.last().json()).doesNotContainKeys("resourceId", "context", "environment");
         assertThatThrownBy(() -> lumo.abac().check(AbacCheck.of("", "read"))).hasMessageContaining("resourceType");
 
         server.on("/orgs/acme/api/v1/abac/check-bulk", Reply.json(Map.of("results", List.of(Map.of("allowed", true), Map.of("allowed", false)))));
         List<AbacDecision> bulk = lumo.abac().checkBulk(List.of(AbacCheck.of("d", "read"), AbacCheck.of("d", "write")));
         assertThat(bulk).extracting(AbacDecision::allowed).containsExactly(true, false);
+        assertThat(server.last().json()).containsKey("checks").doesNotContainKeys("requests", "environment");
+        Map<String, Object> env = Map.of("pep", Map.of("ip", "10.0.0.8"));
+        lumo.abac().checkBulk(List.of(AbacCheck.of("d", "read").context(env), AbacCheck.of("d", "write").resourceId("x").context(env)));
+        assertThat(server.last().json()).containsEntry("environment", env)
+            .containsEntry("checks", List.of(Map.of("resourceType", "d", "action", "read"),
+                Map.of("resourceType", "d", "action", "write", "resourceId", "x")));
+        lumo.abac().checkBulk(List.of(AbacCheck.of("d", "read").context(Map.of("ignored", 1))), env);
+        assertThat(server.last().json()).containsEntry("environment", env)
+            .containsEntry("checks", List.of(Map.of("resourceType", "d", "action", "read")));
+        assertThatThrownBy(() -> lumo.abac().checkBulk(List.of(AbacCheck.of("d", "read").context(env), AbacCheck.of("d", "write"))))
+            .isInstanceOf(io.lumoauth.errors.LumoAuthValidationException.class)
+            .hasMessageContaining("one environment to every check");
         assertThatThrownBy(() -> lumo.abac().checkBulk(List.of())).hasMessageContaining("at least one");
         assertThatThrownBy(() -> lumo.abac().checkBulk(List.of(AbacCheck.of("d", "r"), AbacCheck.of("", "r")))).hasMessageContaining("check 1");
 

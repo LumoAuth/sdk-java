@@ -92,14 +92,22 @@ class LumoAuthSecurityAutoConfigurationTest {
             SecurityContextHolder.getContext().setAuthentication(new BearerTokenAuthentication(principal, token, List.of()));
             assertThat(lumo.can("doc.edit")).isTrue();
             assertThat(server.last().header("Authorization")).isEqualTo("Bearer USER");
-            assertThat(server.last().json()).doesNotContainKey("user_id");
+            assertThat(server.last().json()).doesNotContainKey("user_id").doesNotContainKey("subject");
 
             TestingAuthenticationToken form = new TestingAuthenticationToken("42", "pw");
             form.setAuthenticated(true);
             SecurityContextHolder.getContext().setAuthentication(form);
             assertThat(lumo.can("doc.edit")).isFalse();
             assertThat(server.last().header("X-API-Key")).isEqualTo("k");
-            assertThat(server.last().json()).containsEntry("user_id", "42");
+            assertThat(server.last().json()).containsEntry("subject", Map.of("type", "user", "id", "42"))
+                .doesNotContainKey("user_id");
+
+            TestingAuthenticationToken agentLogin = new TestingAuthenticationToken("agent_agt_7", "pw");
+            agentLogin.setAuthenticated(true);
+            SecurityContextHolder.getContext().setAuthentication(agentLogin);
+            lumo.can("doc.edit");
+            assertThat(server.last().json()).containsEntry("subject", Map.of("type", "agent", "id", "agt_7"));
+            SecurityContextHolder.getContext().setAuthentication(form);
 
             server.on("/api/v1/authz/zanzibar/check", Reply.json(Map.of("allowed", true)));
             assertThat(lumo.isViewer("document:1")).isTrue();

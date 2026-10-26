@@ -34,7 +34,11 @@ public final class AgentsResource {
         this.auth = auth;
     }
 
-    /** Asks whether the agent may perform an action. Writes an audit record either way. */
+    /**
+     * Asks whether the agent may perform an action. Writes an audit record either way.
+     * {@code ip}, {@code userAgent}, {@code requestMethod} and {@code requestPath} in the context always
+     * describe the request LumoAuth received; values you pass under those names are kept under {@code pep}.
+     */
     public AgentAskResult ask(String action) {
         return ask(action, null);
     }
@@ -60,7 +64,11 @@ public final class AgentsResource {
         return ask(action, context).allowed();
     }
 
-    /** The calling agent's own identity, capabilities, and workspace. */
+    /**
+     * The calling agent's own identity, capabilities, and workspace. For an agent credential the
+     * capabilities are the agent's capability roles; a user access token without {@code authz:read}
+     * gets an empty list.
+     */
     public AgentIdentity me() {
         return http.call(Routes.AGENTS_ME, null, null, AgentIdentity.class);
     }

@@ -104,6 +104,25 @@ class HttpTransportTest {
     }
 
     @Test
+    void scopeRefusalExposesRequiredScopes() {
+        LumoAuth lumo = client(LumoAuth.builder().apiKey("k"));
+        server.on("/api/v1/authz/permissions", Reply.json(403, Map.of(
+            "error", "forbidden",
+            "message", "Insufficient scope: this API key is missing a required scope",
+            "status", 403,
+            "details", Map.of("required_scopes", List.of("authz:read"), "granted_scopes", List.of("admin:users:read")))));
+
+        assertThatThrownBy(() -> lumo.permissions().list())
+            .isInstanceOf(LumoAuthPermissionDeniedException.class)
+            .satisfies(e -> {
+                LumoAuthPermissionDeniedException denied = (LumoAuthPermissionDeniedException) e;
+                assertThat(denied.requiredScopes()).containsExactly("authz:read");
+                assertThat(denied.statusCode()).isEqualTo(403);
+            });
+        assertThat(LumoAuthPermissionDeniedException.local("no").requiredScopes()).isEmpty();
+    }
+
+    @Test
     void mapsStatusesOntoTheTaxonomy() {
         LumoAuth lumo = client(LumoAuth.builder().apiKey("k"));
         server.on("/e/401", Reply.json(401, Map.of("error", "invalid_token", "error_description", "expired")));
@@ -124,6 +143,7 @@ class HttpTransportTest {
                 assertThat(api.code()).isEqualTo("CUSTOM");
                 assertThat(api.statusCode()).isEqualTo(403);
                 assertThat(api.bodyAsMap()).isPresent();
+                assertThat(((LumoAuthPermissionDeniedException) e).requiredScopes()).isEmpty();
             });
         assertThatThrownBy(() -> lumo.request("GET", "/e/404", null, Map.class))
             .isInstanceOf(LumoAuthNotFoundException.class)

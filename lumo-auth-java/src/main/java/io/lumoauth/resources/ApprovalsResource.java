@@ -29,7 +29,11 @@ public final class ApprovalsResource {
         this.http = http;
     }
 
-    /** Opens an approval request and returns immediately with the pending approval, whose token identifies it. */
+    /**
+     * Opens an approval request and returns immediately with the pending approval, whose token identifies it.
+     * A portal test token is refused with 403 {@code test_token_not_accepted}. When the user has no enrolled
+     * device, the server emails a plain notification (no sign-in link) and answers 202 {@code email_fallback_sent}.
+     */
     public ApprovalResult create(ApprovalRequest params) {
         ApprovalResult result = http.call(Routes.APPROVALS_CREATE, null, ApiRequest.json(params.toBody()), ApprovalResult.class);
         if (result == null || result.token() == null || result.token().isEmpty()) {
