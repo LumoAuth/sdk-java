@@ -2,8 +2,8 @@ package io.lumoauth.spring;
 
 import io.lumoauth.LumoAuth;
 import io.lumoauth.errors.LumoAuthException;
-import org.springframework.boot.actuate.health.AbstractHealthIndicator;
-import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.health.contributor.AbstractHealthIndicator;
+import org.springframework.boot.health.contributor.Health;
 
 import java.util.Map;
 

@@ -36,8 +36,9 @@ import org.springframework.security.oauth2.server.resource.introspection.OpaqueT
  */
 @AutoConfiguration(after = LumoAuthAutoConfiguration.class,
     beforeName = {
-        "org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration",
-        "org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration"
+        "org.springframework.boot.security.oauth2.server.resource.autoconfigure.OAuth2ResourceServerAutoConfiguration",
+        "org.springframework.boot.security.oauth2.server.resource.autoconfigure.web.OAuth2ResourceServerWebSecurityAutoConfiguration",
+        "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration"
     })
 @ConditionalOnClass(SecurityContextHolder.class)
 public class LumoAuthSecurityAutoConfiguration {
