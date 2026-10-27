@@ -50,7 +50,7 @@
         <!-- Runtime -->
         <jackson.version>2.19.4</jackson.version>
         <!-- The starter targets one Spring Boot major; see README "Spring Boot versions". -->
-        <spring-boot.version>3.5.16</spring-boot.version>
+        <spring-boot.version>4.1.2</spring-boot.version>
 
         <!-- Test -->
         <junit.version>5.14.4</junit.version>
