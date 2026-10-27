@@ -6,7 +6,7 @@ import io.lumoauth.spring.support.FakeServer.Reply;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -17,7 +17,7 @@ import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -58,7 +58,7 @@ class StarterIntegrationTest {
     void browsersAreSentToLumoAuthLogin() throws Exception {
         mvc.perform(get("/api/me").accept("text/html"))
             .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrlPattern("**/oauth2/authorization/lumoauth"));
+            .andExpect(redirectedUrl("/oauth2/authorization/lumoauth"));
     }
 
     @Test

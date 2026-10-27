@@ -5,7 +5,7 @@
 
     <groupId>io.lumoauth</groupId>
     <artifactId>lumo-auth-parent</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <packaging>pom</packaging>
 
     <name>LumoAuth Java SDK (parent)</name>
@@ -43,7 +43,7 @@
     </scm>
 
     <properties>
-        <maven.compiler.release>17</maven.compiler.release>
+	<maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
@@ -57,7 +57,7 @@
         <assertj.version>3.27.7</assertj.version>
 
         <!-- Plugins -->
-        <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
