@@ -7,6 +7,7 @@ import io.lumoauth.errors.LumoAuthPermissionDeniedException;
 import io.lumoauth.model.AgentAskResult;
 import io.lumoauth.model.AgentBudget;
 import io.lumoauth.model.AgentIdentity;
+import io.lumoauth.model.AgentMcpToolDecision;
 import io.lumoauth.model.AgentRegistration;
 import io.lumoauth.model.RegisterAgentRequest;
 import io.lumoauth.model.TokenResponse;
@@ -326,10 +327,23 @@ public final class LumoAgent implements ConfidentialClient {
 
     /**
      * Exchanges the agent's token for one bound to a secured MCP server. The server ID is the MCP server's
-     * https URL (its RFC 8707 resource identifier), e.g. {@code https://mcp.example.com/mcp}.
+     * registered Resource URI (its https URL and RFC 8707 resource identifier), e.g.
+     * {@code https://mcp.example.com/mcp}. The token names exactly one MCP server and works only at that
+     * server: LumoAuth's own API rejects it. This method does not send a DPoP proof, so a server that
+     * requires DPoP needs a DPoP-bound exchange instead.
      */
     public String mcpToken(String serverId) {
         return client.mcp().token(serverId);
+    }
+
+    /**
+     * Asks whether this agent may run one tool on a registered MCP server. A deny returns
+     * {@code allowed == false} and does not throw. See {@link AgentsResource#authorizeMcpTool}.
+     *
+     * @param serverId the registered MCP server ID, e.g. {@code mcp_0123456789abcdef01234567}, not its URL
+     */
+    public AgentMcpToolDecision authorizeMcpTool(String serverId, String tool) {
+        return client.agents().authorizeMcpTool(serverId, tool);
     }
 
     // ── Generic requests ──────────────────────────────────────────────

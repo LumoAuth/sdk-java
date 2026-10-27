@@ -746,7 +746,47 @@ McpToken detail = agent.mcp().tokenDetailed("https://mcp.example.com/mcp", agent
 detail.expiresIn(); detail.scopes();
 ```
 
-`mcpToken` exchanges the agent's token for a token that is bound to one MCP server. The server ID is the MCP server's https URL, which is its RFC 8707 resource identifier. The SDK sends it as `resource`, and LumoAuth sets the token's `aud` from it. The SDK also sends it as `audience`, which LumoAuth ignores. The SDK checks the ID first. When the ID is not an absolute http(s) URL, the SDK throws `LumoAuthValidationException` and sends nothing. LumoAuth accepts `http` only for localhost and private hosts.
+`mcpToken` exchanges the agent's token for a token that is bound to one MCP server. Pass the MCP server's registered Resource URI, which is its https URL and its RFC 8707 resource identifier. The SDK sends it as `resource`, and LumoAuth sets the token's `aud` from it. The SDK also sends it as `audience`, which LumoAuth ignores. The SDK checks the URI first. When it is not an absolute http(s) URL, the SDK throws `LumoAuthValidationException` and sends nothing. LumoAuth accepts `http` only for localhost and private hosts.
+
+The token names exactly one MCP server. It works only at that server, and LumoAuth's own API rejects it. `mcpToken` does not send a DPoP proof. A server that requires DPoP needs a DPoP-bound exchange instead.
+
+#### Check a tool call on your MCP server
+
+Your MCP server can ask LumoAuth whether a caller may run a tool. The server asks with its own client-credentials token, which needs the scope `mcp:authorize`. Its OAuth client must also be one of the MCP server's tool authorizers. Never forward the token that the caller gave you. The MCP specification forbids this "token passthrough".
+
+```java
+// Once at startup: the MCP server's own token.
+LumoAuth tokens = LumoAuth.builder().orgId("acme-corp").withoutCredential().build();
+TokenResponse own = tokens.auth().clientCredentials(clientId, clientSecret, "mcp:authorize");
+LumoAuth lumo = LumoAuth.builder().orgId("acme-corp").accessToken(own.accessToken()).build();
+
+// For each tool call: the subject is the `sub` of the MCP token that you verified.
+McpToolDecision d = lumo.mcp().authorizeTool("mcp_0123456789abcdef01234567", "user", sub, "search_docs");
+if (!d.allowed()) {
+    // refuse the tool call
+}
+```
+
+The first argument is the registered MCP server ID (`mcp_...`), not its URL. The subject type is `user` or `agent`. For a user, pass the user ID from the token's `sub`. For an agent, pass the agent ID (`agt_...`) or the `sub` as it is (`agent_agt_...`). Refresh the token before it expires, or use `tokenProvider(...)` to fetch a new one.
+
+#### Let an agent check a tool for itself
+
+An agent can ask the same question about itself. It uses its own credential.
+
+```java
+AgentMcpToolDecision d = agent.authorizeMcpTool("mcp_0123456789abcdef01234567", "search_docs");
+d.allowed(); d.agentId(); d.resource().id();   // "mcp_0123456789abcdef01234567/search_docs"
+```
+
+`lumo.agents().authorizeMcpTool(serverId, tool)` is the same call on a `LumoAuth` client.
+
+On both calls a deny is an answer, not an error. The result has `allowed() == false`, and the SDK does not throw. Real errors throw as usual:
+
+- a missing `mcp:authorize` scope, or a client that is not a tool authorizer, throws `LumoAuthPermissionDeniedException`;
+- an unknown server throws `LumoAuthNotFoundException`;
+- too many requests throw `LumoAuthRateLimitException`.
+
+The SDK checks the input before it sends anything. The server ID and the tool must not be empty, and they must not contain `/`, `:`, `#` or `*`. A tool name has at most 80 characters. When a check fails, the SDK throws `LumoAuthValidationException`.
 
 <a id="aauth-cryptographic-agent-identity"></a>
 ### Give an agent a cryptographic identity (AAuth)
@@ -932,6 +972,7 @@ The tables list each method, what it does and the credential that it needs. "Any
 | Method | What it does | Credential |
 |---|---|---|
 | `ask(action[, context])`, `isAllowed(action[, context])` | Ask whether an action is allowed | agent or user |
+| `authorizeMcpTool(serverId, tool)` | Ask whether this agent may run a tool on a registered MCP server; a deny returns `allowed() == false` | agent |
 | `me()` | Identity, capabilities and workspace | agent, or user (a user token without `authz:read` gets no capabilities) |
 | `info()`, `capabilities()`, `budget()` | UserInfo, capability list and budget of the agent | agent |
 | `register(RegisterAgentRequest)` | Register a new agent | user token with `admin:agents:write` |
@@ -965,7 +1006,8 @@ The tables list each method, what it does and the credential that it needs. "Any
 | `delegation().exchangeForResource(subjectToken, actorToken, resource, scopes)` | The same, bound to a resource |
 | `DelegationResource.parseActorChain(token)`, `tokenSubject(token)` | Read the chain of actors from a token |
 | `DelegationChain.consentUrl`, `handleConsentCallback`, `exchange`, `request`, `delegateToSubAgent`, `revoke`, `revokeAll` | The whole flow in one object |
-| `mcp().token(serverId[, subjectToken])`, `tokenDetailed` | A token bound to an MCP server; `serverId` is the server's https URL |
+| `mcp().token(serverId[, subjectToken])`, `tokenDetailed` | A token bound to one MCP server; `serverId` is the server's registered Resource URI (its https URL) |
+| `mcp().authorizeTool(serverId, subjectType, subjectId, tool)` | For an MCP server: ask whether a user or agent may run a tool. Use the server's own token with `mcp:authorize`. A deny returns `allowed() == false`. |
 
 ## Troubleshooting
 

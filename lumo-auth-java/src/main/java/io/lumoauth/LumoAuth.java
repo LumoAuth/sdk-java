@@ -110,7 +110,7 @@ public final class LumoAuth {
         return abac;
     }
 
-    /** Agent identity: ask, self-inspection, registration. */
+    /** Agent identity: ask, per-tool MCP self-checks, self-inspection, registration. */
     public AgentsResource agents() {
         return agents;
     }
@@ -130,7 +130,7 @@ public final class LumoAuth {
         return approvals;
     }
 
-    /** Audience-scoped tokens for secured MCP servers. */
+    /** MCP: tokens bound to one secured MCP server, and per-tool checks for the MCP server itself. */
     public McpResource mcp() {
         return mcp;
     }

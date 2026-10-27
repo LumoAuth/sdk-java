@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Added:** per-tool MCP checks. `mcp().authorizeTool(serverId, subjectType, subjectId, tool)`
+  lets an MCP server ask whether a user or agent may run a tool. The server uses its own
+  client-credentials token with the scope `mcp:authorize`, never the caller's token.
+  `agents().authorizeMcpTool(serverId, tool)` and `LumoAgent.authorizeMcpTool` let an agent ask
+  about itself. `serverId` is the registered MCP server ID (`mcp_...`). A deny returns
+  `allowed() == false` (`McpToolDecision`, `AgentMcpToolDecision`) and does not throw.
 - **Fixed:** approvals no longer fail when the push prompt reaches no device. When the
   user has no enrolled push device (or does not exist), LumoAuth answers 202
   `email_fallback_sent` with no approval token. `approvals().create` now returns a result

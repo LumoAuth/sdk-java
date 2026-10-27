@@ -44,6 +44,7 @@ public final class Routes {
     public static final String ABAC_SET_USER_ATTRIBUTE = "abac.setUserAttribute";
     // ── agents: Agent identity: Ask API, self-info, registration
     public static final String AGENTS_ASK = "agents.ask";
+    public static final String AGENTS_AUTHORIZE_MCP_TOOL = "agents.authorizeMcpTool";
     public static final String AGENTS_ME = "agents.me";
     public static final String AGENTS_REGISTER = "agents.register";
     // ── approvals: Push approval for actions
@@ -64,6 +65,8 @@ public final class Routes {
     public static final String JIT_REQUEST = "jit.request";
     public static final String JIT_REQUEST_STATUS = "jit.requestStatus";
     public static final String JIT_TOKEN = "jit.token";
+    // ── mcp: MCP: token exchange for one MCP server (built on oauth.token) and the per-tool check that an MCP server asks with its own client-credentials token
+    public static final String MCP_AUTHORIZE_TOOL = "mcp.authorizeTool";
     // ── permissions: RBAC permission checks (bearer-scoped, org inferred from the credential)
     public static final String PERMISSIONS_CHECK = "permissions.check";
     public static final String PERMISSIONS_CHECK_ALL = "permissions.checkAll";
@@ -93,6 +96,7 @@ public final class Routes {
         Map.entry("abac.setResourceAttribute", new Route("PUT", "/orgs/{orgId}/api/v1/abac/resources/{resourceType}/{resourceId}/attributes/{attributeSlug}")),
         Map.entry("abac.setUserAttribute", new Route("PUT", "/orgs/{orgId}/api/v1/abac/users/{userId}/attributes/{attributeSlug}")),
         Map.entry("agents.ask", new Route("POST", "/orgs/{orgId}/api/v1/agents/ask")),
+        Map.entry("agents.authorizeMcpTool", new Route("POST", "/orgs/{orgId}/api/v1/agents/me/mcp/authorize")),
         Map.entry("agents.me", new Route("GET", "/orgs/{orgId}/api/v1/agents/me")),
         Map.entry("agents.register", new Route("POST", "/orgs/{orgId}/api/v1/agents/register")),
         Map.entry("approvals.create", new Route("POST", "/orgs/{orgId}/api/v1/agents/me/approvals")),
@@ -110,6 +114,7 @@ public final class Routes {
         Map.entry("jit.request", new Route("POST", "/orgs/{orgId}/api/v1/jit/request")),
         Map.entry("jit.requestStatus", new Route("GET", "/orgs/{orgId}/api/v1/jit/request/{requestId}/status")),
         Map.entry("jit.token", new Route("POST", "/orgs/{orgId}/api/v1/jit/request/{requestId}/token")),
+        Map.entry("mcp.authorizeTool", new Route("POST", "/orgs/{orgId}/api/v1/mcp/servers/{serverId}/tools/authorize")),
         Map.entry("permissions.check", new Route("POST", "/api/v1/authz/check")),
         Map.entry("permissions.checkAll", new Route("POST", "/api/v1/authz/check-all")),
         Map.entry("permissions.checkAny", new Route("POST", "/api/v1/authz/check-any")),

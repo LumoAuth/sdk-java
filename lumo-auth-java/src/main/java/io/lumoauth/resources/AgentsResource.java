@@ -7,6 +7,7 @@ import io.lumoauth.internal.HttpTransport;
 import io.lumoauth.model.AgentAskResult;
 import io.lumoauth.model.AgentBudget;
 import io.lumoauth.model.AgentIdentity;
+import io.lumoauth.model.AgentMcpToolDecision;
 import io.lumoauth.model.AgentRegistration;
 import io.lumoauth.model.RegisterAgentRequest;
 import io.lumoauth.model.UserInfo;
@@ -71,6 +72,23 @@ public final class AgentsResource {
      */
     public AgentIdentity me() {
         return http.call(Routes.AGENTS_ME, null, null, AgentIdentity.class);
+    }
+
+    /**
+     * Asks whether the calling agent may run one tool on a registered MCP server. Use the agent's own
+     * credential (an agent access token or an {@code agk_} key). A deny returns {@code allowed == false}
+     * and does not throw. An unknown server throws {@link io.lumoauth.errors.LumoAuthNotFoundException}.
+     *
+     * @param serverId the registered MCP server ID, e.g. {@code mcp_0123456789abcdef01234567}, not its URL
+     * @param tool     the tool name, at most 80 characters, without {@code / : # *}
+     */
+    public AgentMcpToolDecision authorizeMcpTool(String serverId, String tool) {
+        McpResource.requireToolPart("server ID", serverId);
+        McpResource.requireToolName(tool);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("server_id", serverId);
+        body.put("tool", tool);
+        return McpResource.decision(http, Routes.AGENTS_AUTHORIZE_MCP_TOOL, null, body, AgentMcpToolDecision.class);
     }
 
     /** Creates or updates the agent's record in the organization directory. */

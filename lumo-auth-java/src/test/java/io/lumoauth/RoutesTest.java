@@ -28,7 +28,7 @@ class RoutesTest {
 
     @Test
     void registryIsSortedAndComplete() {
-        assertThat(Routes.names()).hasSize(41).containsExactlyElementsOf(new java.util.TreeSet<>(Routes.names()));
+        assertThat(Routes.names()).hasSize(43).containsExactlyElementsOf(new java.util.TreeSet<>(Routes.names()));
         assertThat(Routes.get(Routes.PERMISSIONS_CHECK)).isEqualTo(new Routes.Route("POST", "/api/v1/authz/check"));
     }
 }
