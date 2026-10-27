@@ -2,8 +2,10 @@ package io.lumoauth.spring;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
+import org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration;
+import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +21,8 @@ class LumoAuthLoginAutoConfigurationTest {
 
     private final WebApplicationContextRunner runner = new WebApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(LumoAuthAutoConfiguration.class, LumoAuthSecurityAutoConfiguration.class,
-            LumoAuthLoginAutoConfiguration.class, SecurityAutoConfiguration.class, OAuth2ClientAutoConfiguration.class))
+            LumoAuthLoginAutoConfiguration.class, SecurityAutoConfiguration.class, ServletWebSecurityAutoConfiguration.class,
+            OAuth2ClientAutoConfiguration.class, OAuth2ClientWebSecurityAutoConfiguration.class))
         .withPropertyValues("lumoauth.url=https://lumo.test", "lumoauth.org-id=acme");
 
     @Test

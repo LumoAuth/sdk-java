@@ -37,9 +37,12 @@ import java.util.Map;
  */
 @AutoConfiguration(after = LumoAuthSecurityAutoConfiguration.class,
     beforeName = {
-        "org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration",
-        "org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration",
-        "org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration"
+        "org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration",
+        "org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration",
+        "org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration",
+        "org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration",
+        "org.springframework.boot.security.oauth2.server.resource.autoconfigure.OAuth2ResourceServerAutoConfiguration",
+        "org.springframework.boot.security.oauth2.server.resource.autoconfigure.web.OAuth2ResourceServerWebSecurityAutoConfiguration"
     })
 @ConditionalOnClass({ClientRegistrationRepository.class, SecurityFilterChain.class})
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
