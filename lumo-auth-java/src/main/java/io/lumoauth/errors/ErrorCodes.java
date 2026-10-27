@@ -18,6 +18,7 @@ public final class ErrorCodes {
     public static final String APPROVAL_DENIED = "APPROVAL_DENIED";
     public static final String APPROVAL_TIMEOUT = "APPROVAL_TIMEOUT";
     public static final String BUDGET_EXCEEDED = "BUDGET_EXCEEDED";
+    public static final String APPROVAL_NOT_DELIVERED = "APPROVAL_NOT_DELIVERED";
 
     private ErrorCodes() {
     }

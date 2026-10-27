@@ -16,6 +16,7 @@ package io.lumoauth.errors;
  * ├── LumoAuthNetworkException           transport failure (DNS, TLS, timeout, interrupt)
  * ├── LumoAuthApprovalDeniedException    a human declined the action
  * ├── LumoAuthApprovalTimeoutException   nobody responded in time
+ * ├── LumoAuthApprovalNotDeliveredException  the approval prompt reached no device
  * └── LumoAuthBudgetExceededException    the agent's budget is spent
  * }</pre>
  *

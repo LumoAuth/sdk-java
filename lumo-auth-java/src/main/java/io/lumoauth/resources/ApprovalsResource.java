@@ -1,7 +1,9 @@
 package io.lumoauth.resources;
 
 import io.lumoauth.Routes;
+import io.lumoauth.errors.LumoAuthApiException;
 import io.lumoauth.errors.LumoAuthApprovalDeniedException;
+import io.lumoauth.errors.LumoAuthApprovalNotDeliveredException;
 import io.lumoauth.errors.LumoAuthApprovalTimeoutException;
 import io.lumoauth.errors.LumoAuthNetworkException;
 import io.lumoauth.errors.LumoAuthValidationException;
@@ -31,11 +33,33 @@ public final class ApprovalsResource {
 
     /**
      * Opens an approval request and returns immediately with the pending approval, whose token identifies it.
-     * A portal test token is refused with 403 {@code test_token_not_accepted}. When the user has no enrolled
-     * device, the server emails a plain notification (no sign-in link) and answers 202 {@code email_fallback_sent}.
+     * A portal test token is refused with 403 {@code test_token_not_accepted}.
+     *
+     * <p>When the user has no enrolled push device, LumoAuth answers 202 {@code email_fallback_sent} and emails
+     * the user a notice that has no approval link. LumoAuth gives the same answer when the user does not exist.
+     * This method then returns a result whose {@link ApprovalResult#emailFallbackSent()} is true and whose token
+     * is null. Nobody can approve that request, so tell the user to check their email or enrol a device.
+     *
+     * @throws LumoAuthApprovalNotDeliveredException with reason {@code no_enrolled_device} when LumoAuth answers
+     *         428: the user has no device and the email notice could not be sent
      */
     public ApprovalResult create(ApprovalRequest params) {
-        ApprovalResult result = http.call(Routes.APPROVALS_CREATE, null, ApiRequest.json(params.toBody()), ApprovalResult.class);
+        ApprovalResult result;
+        try {
+            result = http.call(Routes.APPROVALS_CREATE, null, ApiRequest.json(params.toBody()), ApprovalResult.class);
+        } catch (LumoAuthApiException e) {
+            if (e.statusCode() == 428) {
+                throw new LumoAuthApprovalNotDeliveredException(
+                    LumoAuthApprovalNotDeliveredException.REASON_NO_ENROLLED_DEVICE,
+                    e.bodyField("task_id").orElse(null),
+                    e.bodyField("message").orElse(e.getMessage()),
+                    e);
+            }
+            throw e;
+        }
+        if (result != null && result.emailFallbackSent()) {
+            return result;
+        }
         if (result == null || result.token() == null || result.token().isEmpty()) {
             throw new LumoAuthValidationException("the server did not return an approval_token");
         }
@@ -92,6 +116,10 @@ public final class ApprovalsResource {
      * Catch {@link LumoAuthApprovalDeniedException} and {@link LumoAuthApprovalTimeoutException}
      * to tell the outcomes apart; both carry the final payload for audit. To handle a
      * denial without an exception, call {@link #create} and {@link #waitFor} yourself.
+     *
+     * <p>When the prompt reaches no push device, this method throws
+     * {@link LumoAuthApprovalNotDeliveredException} and does not poll. Its reason is
+     * {@code email_fallback_sent} (202) or {@code no_enrolled_device} (428).
      */
     public ApprovalResult require(ApprovalRequest params) {
         return require(params, null);
@@ -99,6 +127,10 @@ public final class ApprovalsResource {
 
     public ApprovalResult require(ApprovalRequest params, WaitOptions options) {
         ApprovalResult created = create(params);
+        if (created.emailFallbackSent()) {
+            throw new LumoAuthApprovalNotDeliveredException(
+                LumoAuthApprovalNotDeliveredException.REASON_EMAIL_FALLBACK_SENT, created.taskId(), created.message());
+        }
         ApprovalResult result = waitFor(created.token(), options);
         if (result.approved()) {
             return result;

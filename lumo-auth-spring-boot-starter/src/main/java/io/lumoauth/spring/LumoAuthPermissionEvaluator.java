@@ -11,7 +11,9 @@ import java.io.Serializable;
  *   <li>{@code hasPermission(null, 'document.edit')}: an RBAC check;</li>
  *   <li>{@code hasPermission('document:123', 'viewer')}: a Zanzibar relation check when the
  *       target is a {@code namespace:id} string;</li>
- *   <li>{@code hasPermission(#id, 'document', 'read')}: an ABAC check (target id, type, action).</li>
+ *   <li>{@code hasPermission(#id, 'document', 'read')}: an ABAC check (target id, type, action).
+ *       It runs under the user's own access token and denies when there is none; see
+ *       {@link LumoAuthorization#abac}.</li>
  * </ul>
  */
 public class LumoAuthPermissionEvaluator implements PermissionEvaluator {

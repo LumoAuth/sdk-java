@@ -113,9 +113,11 @@ class LumoAuthSecurityAutoConfigurationTest {
             assertThat(lumo.isViewer("document:1")).isTrue();
             assertThat(server.last().json()).containsEntry("subject", "user:42");
             assertThat(context.getBean(PermissionEvaluator.class).hasPermission(form, "document:1", "viewer")).isTrue();
+            // A form login has no user access token, and ABAC refuses the API key: deny without a request.
             server.on("/orgs/acme/api/v1/abac/check", Reply.json(Map.of("allowed", true)));
-            assertThat(context.getBean(PermissionEvaluator.class).hasPermission(form, "d1", "document", "read")).isTrue();
-            assertThat(server.last().json()).containsEntry("resourceId", "d1");
+            int before = server.requests().size();
+            assertThat(context.getBean(PermissionEvaluator.class).hasPermission(form, "d1", "document", "read")).isFalse();
+            assertThat(server.requests()).hasSize(before);
         });
     }
 

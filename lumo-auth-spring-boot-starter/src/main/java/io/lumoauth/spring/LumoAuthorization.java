@@ -3,6 +3,8 @@ package io.lumoauth.spring;
 import io.lumoauth.LumoAuth;
 import io.lumoauth.model.AbacCheck;
 import io.lumoauth.model.CheckOptions;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
@@ -12,6 +14,7 @@ import org.springframework.security.oauth2.core.OAuth2Token;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Authorization checks for the current Spring Security principal, registered
@@ -31,16 +34,32 @@ import java.util.Optional;
  * agent subject. That API key needs the {@code authz:check} scope, or its owner the
  * {@code authz.check} permission; without it every check fails with
  * {@code LumoAuthPermissionDeniedException} (403 {@code INSUFFICIENT_PERMISSIONS}).
+ *
+ * <p>{@link #abac} is different: LumoAuth refuses the API key on the ABAC routes. An ABAC check
+ * always runs under the user's own access token, which needs the {@code abac:read} scope. For a
+ * bearer request, that is the incoming token. For an OIDC browser login, it is the access token of
+ * the login's {@code OAuth2AuthorizedClient}, found by the {@link UserAccessTokenResolver}. When no
+ * user token is available, the check is denied ({@code false}) and the reason is logged.
  */
 public class LumoAuthorization {
 
     /** LumoAuth issues agent tokens and userinfo with {@code sub = "agent_" + agentId}. */
     private static final String AGENT_SUB_PREFIX = "agent_";
 
+    private static final Log log = LogFactory.getLog(LumoAuthorization.class);
+
     private final LumoAuth lumo;
+    private final UserAccessTokenResolver userTokens;
+    private final AtomicBoolean warnedNoUserToken = new AtomicBoolean();
 
     public LumoAuthorization(LumoAuth lumo) {
+        this(lumo, UserAccessTokenResolver.NONE);
+    }
+
+    /** @param userTokens finds the user's access token for ABAC checks after an OIDC browser login */
+    public LumoAuthorization(LumoAuth lumo, UserAccessTokenResolver userTokens) {
         this.lumo = lumo;
+        this.userTokens = userTokens == null ? UserAccessTokenResolver.NONE : userTokens;
     }
 
     /** Whether the current principal holds a permission. */
@@ -79,9 +98,33 @@ public class LumoAuthorization {
         return relation(object, "owner");
     }
 
-    /** An ABAC decision for the current principal. */
+    /**
+     * An ABAC decision for the current principal, made under the user's own access token (it needs
+     * {@code abac:read}). Returns {@code false} when no user access token is available, because
+     * LumoAuth refuses the API key on the ABAC routes.
+     */
     public boolean abac(String resourceType, String action, String resourceId) {
-        return principal().client().abac().isAllowed(AbacCheck.of(resourceType, action, resourceId));
+        Authentication authentication = currentAuthentication();
+        Optional<String> token = bearerToken(authentication);
+        if (token.isEmpty()) {
+            try {
+                token = userTokens.resolve(authentication);
+            } catch (RuntimeException e) {
+                log.debug("Looking up the user's access token failed: " + e.getMessage(), e);
+                token = Optional.empty();
+            }
+        }
+        if (token.isEmpty()) {
+            String why = "ABAC check denied for '" + authentication.getName() + "': no user access token is available. "
+                + "LumoAuth refuses the API key on the ABAC routes. Sign in with OIDC (scope abac:read) or send a bearer token.";
+            if (warnedNoUserToken.compareAndSet(false, true)) {
+                log.warn(why);
+            } else {
+                log.debug(why);
+            }
+            return false;
+        }
+        return userClient(token.get()).abac().isAllowed(AbacCheck.of(resourceType, action, resourceId));
     }
 
     /** {@link #can} / {@link #canAll} / {@link #canAny} for a {@link RequirePermission} declaration. */
@@ -98,21 +141,30 @@ public class LumoAuthorization {
 
     /** The current authenticated principal, or an exception when there is none. */
     public Principal principal() {
+        Authentication authentication = currentAuthentication();
+        Optional<String> bearer = bearerToken(authentication);
+        LumoAuth client = bearer.map(this::userClient).orElse(lumo);
+        return new Principal(authentication.getName(), client, bearer.isEmpty() ? subjectOptions(authentication.getName()) : CheckOptions.NONE);
+    }
+
+    private static Authentication currentAuthentication() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
             throw new AuthenticationCredentialsNotFoundException("no authenticated principal for the LumoAuth check");
         }
-        Optional<String> bearer = bearerToken(authentication);
-        LumoAuth client = bearer.map(token -> LumoAuth.builder()
-                .baseUrl(lumo.baseUrl())
-                .orgId(lumo.orgId().orElse(null))
-                .apiKey(null)
-                .accessToken(token)
-                .httpClient(lumo.transport().httpClient())
-                .timeout(lumo.transport().timeout())
-                .build())
-            .orElse(lumo);
-        return new Principal(authentication.getName(), client, bearer.isEmpty() ? subjectOptions(authentication.getName()) : CheckOptions.NONE);
+        return authentication;
+    }
+
+    /** A client that sends only the user's token as {@code Authorization: Bearer}, never the API key. */
+    private LumoAuth userClient(String token) {
+        return LumoAuth.builder()
+            .baseUrl(lumo.baseUrl())
+            .orgId(lumo.orgId().orElse(null))
+            .apiKey(null)
+            .accessToken(token)
+            .httpClient(lumo.transport().httpClient())
+            .timeout(lumo.transport().timeout())
+            .build();
     }
 
     /** The check options that name a principal by its {@code sub}: users by id, agents by {@code agent_<id>}. */

@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- **Fixed:** approvals no longer fail when the push prompt reaches no device. When the
+  user has no enrolled push device (or does not exist), LumoAuth answers 202
+  `email_fallback_sent` with no approval token. `approvals().create` now returns a result
+  with that status and a null token (`ApprovalResult.emailFallbackSent()`); it used to throw
+  `LumoAuthValidationException`. `approvals().require` throws the new
+  `LumoAuthApprovalNotDeliveredException` (code `APPROVAL_NOT_DELIVERED`) with the reason
+  `email_fallback_sent` and does not poll. A 428 `no_enrolled_device` reply throws the same
+  exception with the reason `no_enrolled_device`. `ApprovalResult` gains `message()`.
+- **Fixed:** MCP tokens are now bound to the MCP server. `mcp().token(serverId)` and
+  `LumoAgent.mcpToken(serverId)` send the server ID as the RFC 8707 `resource` parameter,
+  which LumoAuth uses for the token's `aud`. They used to send only `audience`, which
+  LumoAuth ignores. The server ID must now be the MCP server's https URL, for example
+  `https://mcp.example.com/mcp`. Other IDs, such as `urn:mcp:…`, throw
+  `LumoAuthValidationException` before any request.
+- **Fixed:** `jit().pending()` reads the `data` list of the server's reply. It used to look
+  for `requests` and threw on the current reply shape.
+- **Fixed (Spring Boot starter):** ABAC checks (`@lumo.abac` and the three-argument
+  `hasPermission`) now send the user's access token, never the API key, which the ABAC routes
+  refuse with 401. After an OIDC login, the starter reads the token from the login's
+  `OAuth2AuthorizedClient` and refreshes it when it has expired. The login scopes need
+  `abac:read`. When no user token is available, the check returns `false` and logs why.
+  A new `UserAccessTokenResolver` bean type lets the app supply the token.
+
 - **Fixed:** checks about another subject now work. `CheckOptions.forUser(id)` used to
   send `user_id`, which LumoAuth ignores, so the check silently answered for the caller
   (the API key's owner). The SDK now sends `"subject": {"type": "user", "id": …}`. The

@@ -324,7 +324,10 @@ public final class LumoAgent implements ConfidentialClient {
         return client.agents().register(request);
     }
 
-    /** Exchanges the agent's token for one scoped to a secured MCP server. */
+    /**
+     * Exchanges the agent's token for one bound to a secured MCP server. The server ID is the MCP server's
+     * https URL (its RFC 8707 resource identifier), e.g. {@code https://mcp.example.com/mcp}.
+     */
     public String mcpToken(String serverId) {
         return client.mcp().token(serverId);
     }

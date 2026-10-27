@@ -473,7 +473,7 @@ lumoauth:
   login:                                   # browser sign-in; needs spring-boot-starter-oauth2-client
     client-id: lumo_abc123
     client-secret: ${LUMOAUTH_CLIENT_SECRET}
-    scopes: [openid, profile, email]       # add authz:read to list permissions or read roles from agents().me()
+    scopes: [openid, profile, email]       # add abac:read for ABAC checks; add authz:read to list permissions or read roles from agents().me()
     success-url: /dashboard                # default /
     permit-all: [/, /error, /favicon.ico, /public/**]
 
@@ -582,6 +582,16 @@ Which credential the checks use depends on how the user signed in:
 - **Bearer token** (`oauth2ResourceServer`): the checks run under the user's own token. They need no API key and no extra scope.
 - **OIDC browser login** (`lumoauth.login.*`): the checks run with the application's API key and name the signed-in user as the subject. The principal name is the `sub` claim, which is the LumoAuth user id; an `agent_<id>` sub becomes an agent subject. That API key needs the `authz:check` scope. Without it, every check fails with `LumoAuthPermissionDeniedException`.
 
+ABAC checks (`@lumo.abac` and the three-argument `hasPermission`) work in another way. LumoAuth refuses the API key on the ABAC routes, so an ABAC check always sends the user's own access token as `Authorization: Bearer`. For a bearer request, the starter uses the incoming token. After an OIDC login, it uses the access token that Spring Security stored for the login (the `OAuth2AuthorizedClient`), and it refreshes that token when it has expired. The token needs the `abac:read` scope, so add it to the login scopes:
+
+```yaml
+lumoauth:
+  login:
+    scopes: [openid, profile, email, abac:read]
+```
+
+If you register LumoAuth with Spring's own properties instead, set `spring.security.oauth2.client.registration.lumoauth.scope=openid,profile,email,abac:read`. When no user access token is available, the ABAC check returns `false` and logs the reason. To supply the token yourself, define a `UserAccessTokenResolver` bean.
+
 #### Health
 
 With Actuator on the classpath, `/actuator/health/lumoauth` reports whether LumoAuth answers. It also reports maintenance and authentication problems with their error code.
@@ -640,6 +650,8 @@ try {
     notify("Ada declined: " + e.approval().reason());
 } catch (LumoAuthApprovalTimeoutException e) {
     notify("No answer within 3 minutes. The wire was not sent.");
+} catch (LumoAuthApprovalNotDeliveredException e) {
+    notify("Ada has no phone enrolled. Ask her to install the LumoAuth app."); // e.reason()
 }
 ```
 
@@ -650,7 +662,14 @@ try {
 
 To poll yourself, call `create`. It returns at once with a pending result. Later, `status(token)` reads the state, and `waitFor(token)` polls until the state changes. Another process can do this with the same token. If `waitFor` returns a pending result, the wait timed out. It does not mean that the person said no.
 
-Approvals need an agent credential. A test token from the portal is refused with 403 `test_token_not_accepted`. When the user has no enrolled device, LumoAuth emails the user a plain notification instead. That email has no sign-in link.
+Approvals need an agent credential. A test token from the portal is refused with 403 `test_token_not_accepted`.
+
+Sometimes the push prompt reaches no device. Nobody can approve the action then, so the SDK never treats it as approved:
+
+- **202 `email_fallback_sent`.** The user has no enrolled push device, or the user does not exist. LumoAuth gives the same answer in both cases. It emails the user a plain notice, and that email has no approval link. There is no approval token to poll. `create` returns a result with the status `email_fallback_sent` and a null token. Its `emailFallbackSent()` is true. `require` throws `LumoAuthApprovalNotDeliveredException` with the reason `email_fallback_sent` and does not poll.
+- **428 `no_enrolled_device`.** The user has no enrolled device, and the email could not be sent. `create` and `require` throw `LumoAuthApprovalNotDeliveredException` with the reason `no_enrolled_device`.
+
+In both cases, tell the user to check their email or install the LumoAuth app. Then try again. The exception also carries `taskId()` when the response has one.
 
 ### Use Just-in-Time permissions
 
@@ -722,12 +741,12 @@ TokenResponse delegated = lumo.auth().tokenExchange(
 ### Get a token for an MCP server
 
 ```java
-String token = agent.mcpToken("server_123");
-McpToken detail = agent.mcp().tokenDetailed("server_123", agent.accessToken());
+String token = agent.mcpToken("https://mcp.example.com/mcp");
+McpToken detail = agent.mcp().tokenDetailed("https://mcp.example.com/mcp", agent.accessToken());
 detail.expiresIn(); detail.scopes();
 ```
 
-`mcpToken` exchanges the agent's token for a token that is requested for one MCP server. It sends the server ID as `audience`.
+`mcpToken` exchanges the agent's token for a token that is bound to one MCP server. The server ID is the MCP server's https URL, which is its RFC 8707 resource identifier. The SDK sends it as `resource`, and LumoAuth sets the token's `aud` from it. The SDK also sends it as `audience`, which LumoAuth ignores. The SDK checks the ID first. When the ID is not an absolute http(s) URL, the SDK throws `LumoAuthValidationException` and sends nothing. LumoAuth accepts `http` only for localhost and private hosts.
 
 <a id="aauth-cryptographic-agent-identity"></a>
 ### Give an agent a cryptographic identity (AAuth)
@@ -819,6 +838,7 @@ LumoAuthException
 ├── LumoAuthNetworkException              transport failure; getCause() is the IOException
 ├── LumoAuthApprovalDeniedException       a person said no (approval())
 ├── LumoAuthApprovalTimeoutException      nobody answered in time (approval())
+├── LumoAuthApprovalNotDeliveredException the prompt reached no device (reason(), taskId())
 └── LumoAuthBudgetExceededException       the agent has used its budget (budget())
 ```
 
@@ -835,6 +855,7 @@ LumoAuthException
 | `LumoAuthNetworkException` | `NETWORK_ERROR` |
 | `LumoAuthApprovalDeniedException` | `APPROVAL_DENIED` |
 | `LumoAuthApprovalTimeoutException` | `APPROVAL_TIMEOUT` |
+| `LumoAuthApprovalNotDeliveredException` | `APPROVAL_NOT_DELIVERED` |
 | `LumoAuthBudgetExceededException` | `BUDGET_EXCEEDED` |
 
 A scope refusal has the code `forbidden`, because the server's body sets `error: "forbidden"`. Check the exception type, not the code, to detect a denial.
@@ -921,10 +942,10 @@ The tables list each method, what it does and the credential that it needs. "Any
 
 | Method | What it does | Credential |
 |---|---|---|
-| `create(ApprovalRequest)` | Open an approval and return at once | agent |
+| `create(ApprovalRequest)` | Open an approval and return at once. With no push device, the result has the status `email_fallback_sent` and no token. | agent |
 | `status(token)` | Read an approval's state | any |
 | `waitFor(token[, WaitOptions])` | Poll until the state changes or time runs out | any |
-| `require(ApprovalRequest[, WaitOptions])` | `create` plus `waitFor`; throws unless approved | agent |
+| `require(ApprovalRequest[, WaitOptions])` | `create` plus `waitFor`; throws unless approved, and throws `LumoAuthApprovalNotDeliveredException` when the prompt reached no device | agent |
 
 ### `lumo.jit()` and `JitContext`
 
@@ -944,7 +965,7 @@ The tables list each method, what it does and the credential that it needs. "Any
 | `delegation().exchangeForResource(subjectToken, actorToken, resource, scopes)` | The same, bound to a resource |
 | `DelegationResource.parseActorChain(token)`, `tokenSubject(token)` | Read the chain of actors from a token |
 | `DelegationChain.consentUrl`, `handleConsentCallback`, `exchange`, `request`, `delegateToSubAgent`, `revoke`, `revokeAll` | The whole flow in one object |
-| `mcp().token(serverId[, subjectToken])`, `tokenDetailed` | A token requested for an MCP server |
+| `mcp().token(serverId[, subjectToken])`, `tokenDetailed` | A token bound to an MCP server; `serverId` is the server's https URL |
 
 ## Troubleshooting
 

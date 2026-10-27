@@ -44,6 +44,22 @@ The `lumoauth.url`, `org-id` and `api-key` properties also bind from `LUMOAUTH_U
 
 With a bearer token, `@RequirePermission` checks run under the user's own token. After an OIDC browser login, they run with the API key and name the signed-in user, so the API key needs the `authz:check` scope.
 
+ABAC checks (`@lumo.abac` and `hasPermission(#id, 'type', 'action')`) never use the API key, because LumoAuth refuses it on the ABAC routes. They send the user's own access token as a bearer token. With a bearer request, that is the incoming token. After an OIDC login, it is the access token that Spring Security stored for the login, refreshed when it has expired. That token needs the `abac:read` scope, so the login scopes must include it:
+
+```yaml
+lumoauth:
+  login:
+    scopes: [openid, profile, email, abac:read]
+```
+
+With Spring's own client registration, set the same scope there:
+
+```properties
+spring.security.oauth2.client.registration.lumoauth.scope=openid,profile,email,abac:read
+```
+
+When no user access token is available, the ABAC check returns `false` and logs why. A `UserAccessTokenResolver` bean replaces the default token lookup.
+
 ## What each auto-configuration provides
 
 | Auto-configuration | Provides | Needs on the classpath |

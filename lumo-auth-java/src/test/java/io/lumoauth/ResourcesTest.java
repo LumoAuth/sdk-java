@@ -1,6 +1,8 @@
 package io.lumoauth;
 
+import io.lumoauth.errors.ErrorCodes;
 import io.lumoauth.errors.LumoAuthApprovalDeniedException;
+import io.lumoauth.errors.LumoAuthApprovalNotDeliveredException;
 import io.lumoauth.errors.LumoAuthApprovalTimeoutException;
 import io.lumoauth.errors.LumoAuthConfigException;
 import io.lumoauth.errors.LumoAuthValidationException;
@@ -170,10 +172,10 @@ class ResourcesTest {
         assertThat(server.last().form()).containsEntry("grant_type", "authorization_code").containsEntry("code_verifier", "v").containsEntry("client_secret", "sec");
         assertThat(lumo.auth().refreshToken(io.lumoauth.model.RefreshTokenRequest.of("R", "cid", "sec").scopes(List.of("a"))).accessToken()).isEqualTo("A");
         assertThat(server.last().form()).containsEntry("grant_type", "refresh_token").containsEntry("scope", "a");
-        assertThat(lumo.auth().tokenExchange(TokenExchangeRequest.of("S").actorToken("ACT").audience("urn:mcp:x").scopes(List.of("r"))).accessToken()).isEqualTo("A");
+        assertThat(lumo.auth().tokenExchange(TokenExchangeRequest.of("S").actorToken("ACT").audience("https://mcp.example.com/mcp").scopes(List.of("r"))).accessToken()).isEqualTo("A");
         assertThat(server.last().form()).containsEntry("subject_token", "S").containsEntry("actor_token", "ACT")
             .containsEntry("subject_token_type", "urn:ietf:params:oauth:token-type:access_token")
-            .containsEntry("actor_token_type", "urn:ietf:params:oauth:token-type:access_token").containsEntry("audience", "urn:mcp:x")
+            .containsEntry("actor_token_type", "urn:ietf:params:oauth:token-type:access_token").containsEntry("audience", "https://mcp.example.com/mcp")
             .doesNotContainKey("resource");
         // The RFC 8707 resource indicator binds the delegated token's aud.
         lumo.delegation().exchangeForResource("S", "ACT", "https://api.example.com", List.of("r"));
@@ -253,8 +255,68 @@ class ResourcesTest {
 
         assertThatThrownBy(() -> lumo.approvals().create(ApprovalRequest.builder("t", "", "u").build())).hasMessageContaining("reason");
         assertThat(ApprovalRequest.builder("t", "r", "u").build().impact()).isEqualTo(ApprovalImpact.MEDIUM);
-        server.on(create, Reply.json(202, Map.of("status", "email_fallback_sent")));
+        server.on(create, Reply.json(200, Map.of("status", "pending")));
         assertThatThrownBy(() -> lumo.approvals().create(request)).hasMessageContaining("approval_token");
+    }
+
+    @Test
+    void approvalStatusParsesApprovedByObject() {
+        server.on("/orgs/acme/api/v1/agents/me/approvals/tok/status",
+            Reply.json(Map.of("status", "approved", "task_id", "t1", "approved_by", Map.of("user_id", 42))));
+        ApprovalResult result = lumo.approvals().status("tok");
+        assertThat(result.approved()).isTrue();
+        assertThat(result.approvedBy().userId()).isEqualTo("42");
+        assertThat(result.token()).isEqualTo("tok");
+    }
+
+    @Test
+    void approvalEmailFallbackReturnsStatusWithoutToken() {
+        String create = "/orgs/acme/api/v1/agents/me/approvals";
+        ApprovalRequest request = ApprovalRequest.builder("t1", "Wire money", "ada@acme.com").build();
+        server.on(create, Reply.json(202, Map.of("status", "email_fallback_sent", "message", "No device.",
+            "task_id", "t1", "impact", "medium")));
+
+        ApprovalResult created = lumo.approvals().create(request);
+        assertThat(created.status()).isEqualTo(ApprovalResult.STATUS_EMAIL_FALLBACK_SENT);
+        assertThat(created.emailFallbackSent()).isTrue();
+        assertThat(created.token()).isNull();
+        assertThat(created.approved()).isFalse();
+        assertThat(created.taskId()).isEqualTo("t1");
+        assertThat(created.message()).isEqualTo("No device.");
+    }
+
+    @Test
+    void approvalEmailFallbackRequireThrowsWithoutPolling() {
+        String create = "/orgs/acme/api/v1/agents/me/approvals";
+        ApprovalRequest request = ApprovalRequest.builder("t1", "Wire money", "ada@acme.com").build();
+        server.on(create, Reply.json(202, Map.of("status", "email_fallback_sent", "message", "No device.", "task_id", "t1")));
+
+        assertThatThrownBy(() -> lumo.approvals().require(request, WaitOptions.of(Duration.ofMillis(5), Duration.ofSeconds(1))))
+            .isInstanceOfSatisfying(LumoAuthApprovalNotDeliveredException.class, e -> {
+                assertThat(e.reason()).isEqualTo(LumoAuthApprovalNotDeliveredException.REASON_EMAIL_FALLBACK_SENT);
+                assertThat(e.code()).isEqualTo(ErrorCodes.APPROVAL_NOT_DELIVERED);
+                assertThat(e.taskId()).isEqualTo("t1");
+            });
+        assertThat(server.requests()).hasSize(1);
+        assertThat(server.requests().get(0).path()).isEqualTo(create);
+    }
+
+    @Test
+    void approvalNoEnrolledDeviceThrows() {
+        String create = "/orgs/acme/api/v1/agents/me/approvals";
+        ApprovalRequest request = ApprovalRequest.builder("t1", "Wire money", "ada@acme.com").build();
+        server.on(create, Reply.json(428, Map.of("error", "no_enrolled_device", "message", "Enroll the app.")));
+
+        assertThatThrownBy(() -> lumo.approvals().create(request))
+            .isInstanceOfSatisfying(LumoAuthApprovalNotDeliveredException.class, e -> {
+                assertThat(e.reason()).isEqualTo(LumoAuthApprovalNotDeliveredException.REASON_NO_ENROLLED_DEVICE);
+                assertThat(e.code()).isEqualTo(ErrorCodes.APPROVAL_NOT_DELIVERED);
+                assertThat(e.getMessage()).isEqualTo("Enroll the app.");
+            });
+        assertThatThrownBy(() -> lumo.approvals().require(request))
+            .isInstanceOfSatisfying(LumoAuthApprovalNotDeliveredException.class,
+                e -> assertThat(e.reason()).isEqualTo(LumoAuthApprovalNotDeliveredException.REASON_NO_ENROLLED_DEVICE));
+        assertThat(server.requests()).hasSize(2);
     }
 
     @Test
@@ -276,6 +338,12 @@ class ResourcesTest {
         assertThat(lumo.jit().status("r1").pending()).isTrue();
         server.on("/orgs/acme/api/v1/jit/request/r1/token", Reply.json(Map.of("access_token", "JIT", "expires_in", 300)));
         assertThat(lumo.jit().token("r1").accessToken()).isEqualTo("JIT");
+        server.on("/orgs/acme/api/v1/jit/pending", Reply.json(Map.of(
+            "pending_requests", List.of(Map.of("request_id", "r3", "status", "pending")),
+            "count", 1,
+            "data", List.of(Map.of("request_id", "r3", "status", "pending")),
+            "pagination", Map.of("total", 1))));
+        assertThat(lumo.jit().pending()).extracting(JitRequest::requestId).containsExactly("r3");
         server.on("/orgs/acme/api/v1/jit/pending", Reply.json(Map.of("requests", List.of(Map.of("request_id", "r2", "status", "pending")))));
         assertThat(lumo.jit().pending()).extracting(JitRequest::requestId).containsExactly("r2");
         server.on("/orgs/acme/api/v1/jit/pending", Reply.json(List.of()));
@@ -303,12 +371,21 @@ class ResourcesTest {
         assertThat(DelegationResource.tokenSubject(jwt)).contains("user:ada");
         assertThatThrownBy(() -> DelegationResource.tokenSubject("nope")).isInstanceOf(LumoAuthValidationException.class);
 
-        assertThat(lumo.mcp().token("urn:mcp:fin", "SUBJ")).isEqualTo("D");
-        assertThat(server.last().form()).containsEntry("audience", "urn:mcp:fin").containsEntry("subject_token", "SUBJ").doesNotContainKey("actor_token");
-        assertThatThrownBy(() -> lumo.mcp().token("urn:mcp:fin")).isInstanceOf(LumoAuthConfigException.class).hasMessageContaining("subject token");
+        String mcp = "https://mcp.example.com/mcp";
+        assertThat(lumo.mcp().token(mcp, "SUBJ")).isEqualTo("D");
+        assertThat(server.last().form()).containsEntry("resource", mcp).containsEntry("audience", mcp)
+            .containsEntry("subject_token", "SUBJ").doesNotContainKey("actor_token");
+        assertThatThrownBy(() -> lumo.mcp().token(mcp)).isInstanceOf(LumoAuthConfigException.class).hasMessageContaining("subject token");
         LumoAuth bearer = LumoAuth.builder().baseUrl(server.url()).orgId("acme").apiKey(null).accessToken("ME").build();
-        assertThat(bearer.mcp().tokenDetailed("urn:mcp:fin", null).accessToken()).isEqualTo("D");
-        assertThat(server.last().form()).containsEntry("subject_token", "ME");
-        assertThatThrownBy(() -> lumo.mcp().token("")).isInstanceOf(LumoAuthValidationException.class);
+        assertThat(bearer.mcp().tokenDetailed(mcp, null).accessToken()).isEqualTo("D");
+        assertThat(server.last().form()).containsEntry("subject_token", "ME").containsEntry("resource", mcp);
+        assertThat(bearer.mcp().token("http://localhost:3000/mcp")).isEqualTo("D");
+        assertThat(server.last().form()).containsEntry("resource", "http://localhost:3000/mcp");
+        int before = server.requests().size();
+        for (String bad : List.of("", "urn:mcp:fin", "server_123", "/mcp", "ftp://mcp.example.com", "https://mcp.example.com/mcp#x")) {
+            assertThatThrownBy(() -> bearer.mcp().token(bad)).as(bad)
+                .isInstanceOf(LumoAuthValidationException.class).hasMessageContaining("https URL");
+        }
+        assertThat(server.requests()).hasSize(before);
     }
 }

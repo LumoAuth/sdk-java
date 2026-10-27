@@ -83,12 +83,13 @@ public final class JitResource {
      * session or a user access token with the {@code jit:approve} scope, never an agent credential.
      */
     public List<JitRequest> pending() {
-        // The endpoint returns either a bare array or an envelope with `requests`.
+        // LumoAuth answers {pending_requests, count, data, pagination}; `data` is the list.
+        // A bare array and the older `requests` envelope are still accepted.
         JsonNode node = http.callNode(Routes.JIT_PENDING, null, null);
         if (node == null) {
             return List.of();
         }
-        JsonNode array = node.isArray() ? node : node.get("requests");
+        JsonNode array = node.isArray() ? node : firstArray(node, "data", "pending_requests", "requests");
         if (array == null || !array.isArray()) {
             throw new LumoAuthValidationException("could not decode the pending requests response");
         }
@@ -97,6 +98,16 @@ public final class JitResource {
             out.add(Json.convert(item, JitRequest.class, "jit.pending"));
         }
         return List.copyOf(out);
+    }
+
+    private static JsonNode firstArray(JsonNode node, String... keys) {
+        for (String key : keys) {
+            JsonNode value = node.get(key);
+            if (value != null && value.isArray()) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private static void requireTaskId(String taskId) {

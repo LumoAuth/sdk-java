@@ -1,6 +1,7 @@
 package io.lumoauth.spring;
 
 import io.lumoauth.LumoAuth;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.aop.Advisor;
 import org.springframework.aop.support.ComposablePointcut;
 import org.springframework.aop.support.DefaultPointcutAdvisor;
@@ -11,9 +12,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Role;
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.server.resource.introspection.OpaqueTokenIntrospector;
 
 /**
@@ -23,6 +29,8 @@ import org.springframework.security.oauth2.server.resource.introspection.OpaqueT
  *       (Spring Boot's resource-server auto-configuration picks the bean up);</li>
  *   <li>the {@code lumo} SpEL bean ({@link LumoAuthorization}) and a
  *       {@link PermissionEvaluator} for {@code @PreAuthorize};</li>
+ *   <li>with the OAuth2 client on the classpath, a {@link UserAccessTokenResolver} that reads an
+ *       OIDC login's access token for ABAC checks;</li>
  *   <li>{@link RequirePermission} method guards.</li>
  * </ul>
  */
@@ -36,8 +44,23 @@ public class LumoAuthSecurityAutoConfiguration {
 
     @Bean("lumo")
     @ConditionalOnMissingBean
-    public LumoAuthorization lumoAuthorization(LumoAuth lumo) {
-        return new LumoAuthorization(lumo);
+    public LumoAuthorization lumoAuthorization(LumoAuth lumo, ObjectProvider<UserAccessTokenResolver> userTokens) {
+        return new LumoAuthorization(lumo, userTokens.getIfAvailable(() -> UserAccessTokenResolver.NONE));
+    }
+
+    /** Finds the access token of an OIDC browser login, for ABAC checks. */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(name = "org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager")
+    static class OAuth2ClientAccessTokens {
+        @Bean
+        @ConditionalOnMissingBean(UserAccessTokenResolver.class)
+        OAuth2AuthorizedClientAccessTokenResolver lumoAuthUserAccessTokenResolver(
+            ObjectProvider<OAuth2AuthorizedClientManager> managers,
+            ObjectProvider<ClientRegistrationRepository> registrations,
+            ObjectProvider<OAuth2AuthorizedClientRepository> repositories,
+            ObjectProvider<OAuth2AuthorizedClientService> services) {
+            return new OAuth2AuthorizedClientAccessTokenResolver(managers, registrations, repositories, services);
+        }
     }
 
     @Bean
