@@ -106,6 +106,9 @@
                     <configuration>
                         <release>${maven.compiler.release}</release>
                         <parameters>true</parameters>
+                        <!-- JDK 23+ runs no annotation processor unless asked to. The starter needs
+                             its configuration and auto-configure processors to run. -->
+                        <proc>full</proc>
                         <compilerArgs>
                             <arg>-Xlint:all,-processing,-serial</arg>
                         </compilerArgs>
