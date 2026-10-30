@@ -2,12 +2,17 @@
 
 ## Unreleased
 
+## 1.2.0 — 2026-10-30
+
 - **Added:** per-tool MCP checks. `mcp().authorizeTool(serverId, subjectType, subjectId, tool)`
   lets an MCP server ask whether a user or agent may run a tool. The server uses its own
   client-credentials token with the scope `mcp:authorize`, never the caller's token.
   `agents().authorizeMcpTool(serverId, tool)` and `LumoAgent.authorizeMcpTool` let an agent ask
   about itself. `serverId` is the registered MCP server ID (`mcp_...`). A deny returns
   `allowed() == false` (`McpToolDecision`, `AgentMcpToolDecision`) and does not throw.
+
+## 1.1.0 — 2026-10-26
+
 - **Fixed:** approvals no longer fail when the push prompt reaches no device. When the
   user has no enrolled push device (or does not exist), LumoAuth answers 202
   `email_fallback_sent` with no approval token. `approvals().create` now returns a result
@@ -56,7 +61,7 @@
   email no longer carries a sign-in link, and token exchange refuses inactive
   subjects and JIT task tokens.
 
-## 1.0.0 — 2026-10-08>
+## 1.0.0 — 2026-10-08
 
 First release of the hand-written Java SDK and the Spring Boot starter.
 
