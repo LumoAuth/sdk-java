@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.2.0 — 2026-10-30
+
 - **Added:** per-tool MCP checks. `mcp().authorizeTool(serverId, subjectType, subjectId, tool)`
   lets an MCP server ask whether a user or agent may run a tool. The server uses its own
   client-credentials token with the scope `mcp:authorize`, never the caller's token.
