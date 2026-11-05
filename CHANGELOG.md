@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.3.0 — 2026-11-05
+
 - **Fixed (Spring Boot starter):** builds on JDK 23 and newer now run the Spring Boot
   annotation processors (`<proc>full</proc>` on `maven-compiler-plugin`), ensuring the starter
   jar packages `META-INF/spring-configuration-metadata.json` and
