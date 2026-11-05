@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Fixed (Spring Boot starter):** builds on JDK 23 and newer now run the Spring Boot
+  annotation processors (`<proc>full</proc>` on `maven-compiler-plugin`), ensuring the starter
+  jar packages `META-INF/spring-configuration-metadata.json` and
+  `META-INF/spring-autoconfigure-metadata.properties` for IDE completion of `lumoauth.*`
+  properties and faster auto-configuration.
+- **Changed (Spring Boot starter):** updated the managed Spring Boot dependency baseline to
+  `4.1.2` (along with Jackson `2.19.4`, JUnit `5.14.4` and AssertJ `3.27.7`).
+- **Changed:** aligned `io.lumoauth:lumo-auth-parent`, `io.lumoauth:lumo-auth-java` and
+  `io.lumoauth:lumo-auth-spring-boot-starter` with the LumoAuth `1.3.0` SDK release train.
+
 ## 1.2.0 — 2026-10-30
 
 - **Added:** per-tool MCP checks. `mcp().authorizeTool(serverId, subjectType, subjectId, tool)`
