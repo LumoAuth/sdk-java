@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.4.0 — 2026-11-06
+
 - **New:** `LumoAgent.reportUsage(tokens, costUsd)` and `agents().reportUsage(...)`
   (`POST /agents/me/usage`) report the model tokens and cost that the agent used, returning a
   `UsageReportResult` (`recorded`, `budget`). LumoAuth does not see model calls, so token and cost
