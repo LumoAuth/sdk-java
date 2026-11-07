@@ -3,6 +3,7 @@ package io.lumoauth;
 import io.lumoauth.errors.LumoAuthBudgetExceededException;
 import io.lumoauth.errors.LumoAuthConfigException;
 import io.lumoauth.errors.LumoAuthPermissionDeniedException;
+import io.lumoauth.model.AgentBudget;
 import io.lumoauth.model.RegisterAgentRequest;
 import io.lumoauth.support.FakeServer;
 import io.lumoauth.support.FakeServer.Reply;
@@ -89,6 +90,22 @@ class LumoAgentTest {
         agent.requireCapability("tool:search_web");
         assertThatThrownBy(() -> agent.requireCapability("tool:send_email"))
             .isInstanceOf(LumoAuthPermissionDeniedException.class);
+    }
+
+    @Test
+    void budgetGuardUsesTheServersVerdict() {
+        server.on("/orgs/acme/api/v1/oauth/token", Reply.json(Map.of("access_token", "T", "expires_in", 3600)));
+        // Any limit counts on the server (here calls per hour), not only the daily token cap.
+        server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "ag", "budget_policy", Map.of(
+            "max_api_calls_per_hour", 10, "api_calls_this_hour", 10, "max_tokens_per_day", 1000, "tokens_used_today", 0, "exhausted", true))));
+        assertThat(agent.budget().reportedExhausted()).isTrue();
+        assertThatThrownBy(agent::checkBudget).isInstanceOf(LumoAuthBudgetExceededException.class);
+
+        server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "ag", "budget_policy", Map.of(
+            "max_tokens_per_day", 100, "tokens_used_today", 150, "exhausted", false))));
+        agent.info(true);
+        assertThat(agent.budget().exhausted()).isFalse();
+        assertThat(new AgentBudget(100, 100, null).exhausted()).isTrue();
     }
 
     @Test

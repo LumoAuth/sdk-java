@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Fixed:** `LumoAgent.checkBudget()` and `AgentBudget.exhausted()` use the server's own verdict
+  when UserInfo reports `exhausted` (any limit, any window: calls, tokens or cost per hour, day or
+  month); the new `AgentBudget.reportedExhausted()` carries it. Without it (older servers), the
+  daily token cap is compared with today's usage, as before. The three-argument constructor stays.
 - **Fixed:** `LumoAgent.hasCapability` and `requireCapability` match capability names the way the
   server does. The server stores capabilities in lower case with `.` between the parts, so a check
   for `tool:search_web` used to fail against the stored `tool.search_web`, and a held wildcard such
