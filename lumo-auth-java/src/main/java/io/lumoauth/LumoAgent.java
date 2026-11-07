@@ -11,6 +11,7 @@ import io.lumoauth.model.AgentMcpToolDecision;
 import io.lumoauth.model.AgentRegistration;
 import io.lumoauth.model.RegisterAgentRequest;
 import io.lumoauth.model.TokenResponse;
+import io.lumoauth.model.UsageReportResult;
 import io.lumoauth.model.UserInfo;
 import io.lumoauth.resources.AgentsResource;
 import io.lumoauth.resources.ApprovalsResource;
@@ -256,6 +257,26 @@ public final class LumoAgent implements ConfidentialClient {
         AgentIdentity fresh = client.agents().me();
         identity = fresh;
         return fresh;
+    }
+
+    /**
+     * Report the model tokens and cost that the agent just used, for example the usage that the
+     * model provider returned. LumoAuth does not see model calls, so token and cost limits count
+     * only reported usage. The budget in the result also replaces the cached one, so
+     * {@link #checkBudget()} reflects the report without another request.
+     *
+     * <pre>{@code
+     * agent.reportUsage(response.usage().totalTokens(), 0.0042);
+     * agent.checkBudget();   // LumoAuthBudgetExceededException once the budget is spent
+     * }</pre>
+     */
+    public UsageReportResult reportUsage(long tokens, double costUsd) {
+        UsageReportResult result = client.agents().reportUsage(tokens, costUsd);
+        UserInfo cached = info;
+        if (cached != null) {
+            info = cached.withBudgetPolicy(result.budget());
+        }
+        return result;
     }
 
     /** The agent's UserInfo claims (capabilities, budget policy), cached after the first call. */

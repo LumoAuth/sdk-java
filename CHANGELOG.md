@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **New:** `LumoAgent.reportUsage(tokens, costUsd)` and `agents().reportUsage(...)`
+  (`POST /agents/me/usage`) report the model tokens and cost that the agent used, returning a
+  `UsageReportResult` (`recorded`, `budget`). LumoAuth does not see model calls, so token and cost
+  limits count only reported usage. The returned budget also refreshes `checkBudget()`.
 - **Fixed:** `LumoAgent.checkBudget()` and `AgentBudget.exhausted()` use the server's own verdict
   when UserInfo reports `exhausted` (any limit, any window: calls, tokens or cost per hour, day or
   month); the new `AgentBudget.reportedExhausted()` carries it. Without it (older servers), the

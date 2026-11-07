@@ -10,6 +10,7 @@ import io.lumoauth.model.AgentIdentity;
 import io.lumoauth.model.AgentMcpToolDecision;
 import io.lumoauth.model.AgentRegistration;
 import io.lumoauth.model.RegisterAgentRequest;
+import io.lumoauth.model.UsageReportResult;
 import io.lumoauth.model.UserInfo;
 
 import java.util.LinkedHashMap;
@@ -54,6 +55,34 @@ public final class AgentsResource {
             body.put("context", context);
         }
         return http.call(Routes.AGENTS_ASK, null, ApiRequest.json(body), AgentAskResult.class);
+    }
+
+    /**
+     * Report the model tokens and cost that the agent used.
+     *
+     * <p>LumoAuth does not see the agent's model calls, so token and cost limits
+     * ({@code max_tokens_per_day}, {@code max_cost_per_month_usd}, ...) count only the usage
+     * reported here. Report after each model call, or batch a few. The report is not a metered
+     * call and is accepted when the budget is spent; the result's budget says whether it is.
+     * Agent credentials only.
+     *
+     * @param tokens  model tokens since the last report (0 or more)
+     * @param costUsd cost in USD since the last report (0 or more)
+     */
+    public UsageReportResult reportUsage(long tokens, double costUsd) {
+        if (tokens < 0) {
+            throw new LumoAuthValidationException("tokens must not be negative");
+        }
+        if (costUsd < 0 || !Double.isFinite(costUsd)) {
+            throw new LumoAuthValidationException("costUsd must be a non-negative number");
+        }
+        if (tokens == 0 && costUsd == 0) {
+            throw new LumoAuthValidationException("report tokens or costUsd greater than zero");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("tokens", tokens);
+        body.put("cost_usd", costUsd);
+        return http.call(Routes.AGENTS_REPORT_USAGE, null, ApiRequest.json(body), UsageReportResult.class);
     }
 
     /** {@link #ask} reduced to a boolean. */

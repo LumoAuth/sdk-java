@@ -47,6 +47,7 @@ public final class Routes {
     public static final String AGENTS_AUTHORIZE_MCP_TOOL = "agents.authorizeMcpTool";
     public static final String AGENTS_ME = "agents.me";
     public static final String AGENTS_REGISTER = "agents.register";
+    public static final String AGENTS_REPORT_USAGE = "agents.reportUsage";
     // ── approvals: Push approval for actions
     public static final String APPROVALS_CREATE = "approvals.create";
     public static final String APPROVALS_STATUS = "approvals.status";
@@ -99,6 +100,7 @@ public final class Routes {
         Map.entry("agents.authorizeMcpTool", new Route("POST", "/orgs/{orgId}/api/v1/agents/me/mcp/authorize")),
         Map.entry("agents.me", new Route("GET", "/orgs/{orgId}/api/v1/agents/me")),
         Map.entry("agents.register", new Route("POST", "/orgs/{orgId}/api/v1/agents/register")),
+        Map.entry("agents.reportUsage", new Route("POST", "/orgs/{orgId}/api/v1/agents/me/usage")),
         Map.entry("approvals.create", new Route("POST", "/orgs/{orgId}/api/v1/agents/me/approvals")),
         Map.entry("approvals.status", new Route("GET", "/orgs/{orgId}/api/v1/agents/me/approvals/{token}/status")),
         Map.entry("oauth.authorize", new Route("GET", "/orgs/{orgId}/api/v1/oauth/authorize")),

@@ -93,6 +93,32 @@ class LumoAgentTest {
     }
 
     @Test
+    void reportUsagePostsAndRefreshesTheCachedBudget() {
+        server.on("/orgs/acme/api/v1/oauth/token", Reply.json(Map.of("access_token", "T", "expires_in", 3600)));
+        server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "ag", "budget_policy", Map.of(
+            "max_tokens_per_day", 1000, "tokens_used_today", 0, "exhausted", false))));
+        server.on("/orgs/acme/api/v1/agents/me/usage", Reply.json(Map.of(
+            "recorded", Map.of("tokens", 1000, "cost_usd", 0.02),
+            "budget", Map.of("max_tokens_per_day", 1000, "tokens_used_today", 1000, "exhausted", true))));
+        agent.checkBudget();
+
+        var result = agent.reportUsage(1000, 0.02);
+
+        var request = server.last();
+        assertThat(request.method()).isEqualTo("POST");
+        assertThat(request.path()).isEqualTo("/orgs/acme/api/v1/agents/me/usage");
+        assertThat(request.json()).containsEntry("tokens", 1000).containsEntry("cost_usd", 0.02);
+        assertThat(result.recorded().tokens()).isEqualTo(1000);
+        assertThat(result.budget().exhausted()).isTrue();
+        long userinfoCalls = server.requests().stream().filter(r -> r.path().endsWith("/userinfo")).count();
+        assertThatThrownBy(agent::checkBudget).isInstanceOf(LumoAuthBudgetExceededException.class);
+        assertThat(server.requests().stream().filter(r -> r.path().endsWith("/userinfo")).count()).isEqualTo(userinfoCalls);
+
+        assertThatThrownBy(() -> agent.reportUsage(-1, 0)).isInstanceOf(io.lumoauth.errors.LumoAuthValidationException.class);
+        assertThatThrownBy(() -> agent.reportUsage(0, 0)).isInstanceOf(io.lumoauth.errors.LumoAuthValidationException.class);
+    }
+
+    @Test
     void budgetGuardUsesTheServersVerdict() {
         server.on("/orgs/acme/api/v1/oauth/token", Reply.json(Map.of("access_token", "T", "expires_in", 3600)));
         // Any limit counts on the server (here calls per hour), not only the daily token cap.

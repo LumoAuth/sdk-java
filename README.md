@@ -615,6 +615,10 @@ boolean canSearch = agent.hasCapability("tool:search_web");
 AgentAskResult verdict = agent.ask("delete_file", Map.of("path", "/finance/q4.xlsx"));
 verdict.allowed(); verdict.reason(); verdict.auditId();
 
+// LumoAuth does not see your model calls: report their tokens and cost so that
+// token and cost limits apply. The returned budget also refreshes checkBudget().
+agent.reportUsage(response.usage().totalTokens(), 0.0042);
+
 AgentBudget budget = agent.budget();
 budget.tokensUsedToday(); budget.maxTokensPerDay(); budget.exhausted();
 

@@ -39,6 +39,12 @@ public record UserInfo(
             preferredUsername, roles, agentId, clientId, capabilities, budgetPolicy, newRaw);
     }
 
+    /** A copy with another budget, for example the one returned by a usage report. */
+    public UserInfo withBudgetPolicy(AgentBudget newBudgetPolicy) {
+        return new UserInfo(sub, email, emailVerified, name, givenName, familyName, picture,
+            preferredUsername, roles, agentId, clientId, capabilities, newBudgetPolicy, raw);
+    }
+
     /** True for agent principals (the response carries an agent_id). */
     public boolean isAgent() {
         return agentId != null && !agentId.isEmpty();
