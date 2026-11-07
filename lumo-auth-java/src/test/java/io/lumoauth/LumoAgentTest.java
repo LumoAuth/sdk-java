@@ -77,6 +77,21 @@ class LumoAgentTest {
     }
 
     @Test
+    void capabilityGuardsMatchLikeTheServer() {
+        server.on("/orgs/acme/api/v1/oauth/token", Reply.json(Map.of("access_token", "T", "expires_in", 3600)));
+        // The server returns capabilities in their stored form.
+        server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "ag", "capabilities", List.of("tool.search_web", "invoices.*"))));
+        assertThat(agent.hasCapability("tool:search_web")).isTrue();   // spelled as registered
+        assertThat(agent.hasCapability("tool.search_web")).isTrue();   // stored form
+        assertThat(agent.hasCapability("invoices.approve")).isTrue();  // through invoices.*
+        assertThat(agent.hasCapability("Invoices:Read:Draft")).isTrue();
+        assertThat(agent.hasCapability("invoices")).isFalse();         // a wildcard never covers its prefix
+        agent.requireCapability("tool:search_web");
+        assertThatThrownBy(() -> agent.requireCapability("tool:send_email"))
+            .isInstanceOf(LumoAuthPermissionDeniedException.class);
+    }
+
+    @Test
     void capabilityAndBudgetGuards() {
         server.on("/orgs/acme/api/v1/oauth/token", Reply.json(Map.of("access_token", "T", "expires_in", 3600)));
         server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "ag", "agent_id", "ag", "capabilities", List.of("tool:search"),

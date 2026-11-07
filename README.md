@@ -630,6 +630,8 @@ agent.requireCapability("tool:send_email");   // LumoAuthPermissionDeniedExcepti
 agent.checkBudget();                          // LumoAuthBudgetExceededException
 ```
 
+`hasCapability` and `requireCapability` match names the way the server does. LumoAuth stores capabilities in lower case with `.` between the parts, so `"tool:search_web"` matches the stored `tool.search_web`. A held wildcard such as `tool.*` covers `tool.search_web`, but not `tool` itself. `Capabilities.normalize`, `Capabilities.covers` and `Capabilities.anyCovers` expose the same rules.
+
 A `LumoAgent` also exposes the namespaces with the agent's token: `agents()`, `approvals()`, `jit()`, `delegation()`, `mcp()` and `permissions()`. `agent.client()` returns the underlying `LumoAuth`.
 
 ### Ask a human for approval

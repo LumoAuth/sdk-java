@@ -278,9 +278,15 @@ public final class LumoAgent implements ConfidentialClient {
         return info().capabilities();
     }
 
-    /** Whether the agent holds a capability. */
+    /**
+     * Whether the agent holds a capability. Names match as on the server:
+     * {@code "tool:search_web"} matches the stored {@code tool.search_web}, and a
+     * held {@code tool.*} covers it (see {@link Capabilities#covers}). This checks
+     * only the agent's registered capabilities; the Ask API ({@link #ask}) also
+     * applies your policies and the token's scope.
+     */
     public boolean hasCapability(String capability) {
-        return capabilities().contains(capability);
+        return Capabilities.anyCovers(capabilities(), capability);
     }
 
     /**

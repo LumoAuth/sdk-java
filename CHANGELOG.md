@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Fixed:** `LumoAgent.hasCapability` and `requireCapability` match capability names the way the
+  server does. The server stores capabilities in lower case with `.` between the parts, so a check
+  for `tool:search_web` used to fail against the stored `tool.search_web`, and a held wildcard such
+  as `invoices.*` never matched `invoices.read`. The new `io.lumoauth.Capabilities` class
+  (`normalize`, `covers`, `anyCovers`) holds the rules, tested against
+  `sdk-contract/vectors/agent-capabilities.json`.
+
 ## 1.3.0 — 2026-11-05
 
 - **Fixed (Spring Boot starter):** builds on JDK 23 and newer now run the Spring Boot
