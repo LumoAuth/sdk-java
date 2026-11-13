@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **Fixed:** the route `web.magicLink` (`Routes.WEB_MAGIC_LINK`) now points to
+  `POST /orgs/{orgId}/api/v1/oauth/magic-link`, the endpoint for applications that render their
+  own sign-in form. It used to point to `POST /orgs/{orgId}/magic-link`. That path is the form
+  endpoint of the hosted login page, and it accepts a request only from the hosted page itself, so
+  the server refused every request that came from your own code. No SDK method calls this route.
+  The change matters only to code that reads the route table (`Routes.get`, `Routes.path`) or
+  sends the route with `transport().call(...)`. The new endpoint takes a JSON body with `email`
+  and `client_id`, plus the optional `return_to` and `captcha_token`. Send it with no credential
+  (`ApiRequest.noAuth()`). The server answers `{"status": "sent"}` whether or not the address
+  belongs to an account. When sign-in links are off for the organization, it answers 404 with
+  `magic_link_disabled`. `web.checkEmail` did not change.
+
 ## 1.4.0 — 2026-11-06
 
 - **New:** `LumoAgent.reportUsage(tokens, costUsd)` and `agents().reportUsage(...)`
