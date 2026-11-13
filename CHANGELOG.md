@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.5.0 — 2026-11-13
+
 - **Fixed:** the route `web.magicLink` (`Routes.WEB_MAGIC_LINK`) now points to
   `POST /orgs/{orgId}/api/v1/oauth/magic-link`, the endpoint for applications that render their
   own sign-in form. It used to point to `POST /orgs/{orgId}/magic-link`. That path is the form
