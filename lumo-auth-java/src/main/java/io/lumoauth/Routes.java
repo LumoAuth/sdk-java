@@ -74,7 +74,7 @@ public final class Routes {
     public static final String PERMISSIONS_CHECK_ANY = "permissions.checkAny";
     public static final String PERMISSIONS_CHECK_BULK = "permissions.checkBulk";
     public static final String PERMISSIONS_LIST = "permissions.list";
-    // ── webauth: Browser sign-in helpers served by the web firewall
+    // ── webauth: Sign-in helpers for applications that render their own sign-in form
     public static final String WEB_CHECK_EMAIL = "web.checkEmail";
     public static final String WEB_MAGIC_LINK = "web.magicLink";
     // ── zanzibar: Relationship-based checks and expansion
@@ -123,7 +123,7 @@ public final class Routes {
         Map.entry("permissions.checkBulk", new Route("POST", "/api/v1/authz/check-bulk")),
         Map.entry("permissions.list", new Route("GET", "/api/v1/authz/permissions")),
         Map.entry("web.checkEmail", new Route("POST", "/orgs/{orgId}/check-email")),
-        Map.entry("web.magicLink", new Route("POST", "/orgs/{orgId}/magic-link")),
+        Map.entry("web.magicLink", new Route("POST", "/orgs/{orgId}/api/v1/oauth/magic-link")),
         Map.entry("zanzibar.check", new Route("POST", "/api/v1/authz/zanzibar/check")),
         Map.entry("zanzibar.expand", new Route("POST", "/api/v1/authz/zanzibar/expand"))
     );
