@@ -122,7 +122,7 @@ public final class Routes {
         Map.entry("permissions.checkAny", new Route("POST", "/api/v1/authz/check-any")),
         Map.entry("permissions.checkBulk", new Route("POST", "/api/v1/authz/check-bulk")),
         Map.entry("permissions.list", new Route("GET", "/api/v1/authz/permissions")),
-        Map.entry("web.checkEmail", new Route("POST", "/orgs/{orgId}/check-email")),
+        Map.entry("web.checkEmail", new Route("POST", "/orgs/{orgId}/api/v1/oauth/check-email")),
         Map.entry("web.magicLink", new Route("POST", "/orgs/{orgId}/api/v1/oauth/magic-link")),
         Map.entry("zanzibar.check", new Route("POST", "/api/v1/authz/zanzibar/check")),
         Map.entry("zanzibar.expand", new Route("POST", "/api/v1/authz/zanzibar/expand"))
