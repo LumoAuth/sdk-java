@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.6.0 — 2026-11-18
+
 - **Changed:** capability matching (`io.lumoauth.Capabilities`, `LumoAgent.hasCapability` and
   `requireCapability`) follows the server's `<resource>:<action>` form, such as `invoices:read`
   and `invoices:*`. LumoAuth refuses the dot form (`invoices.read`) when you register a
