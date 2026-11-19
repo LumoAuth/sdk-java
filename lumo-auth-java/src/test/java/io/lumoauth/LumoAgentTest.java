@@ -81,14 +81,15 @@ class LumoAgentTest {
     void capabilityGuardsMatchLikeTheServer() {
         server.on("/orgs/acme/api/v1/oauth/token", Reply.json(Map.of("access_token", "T", "expires_in", 3600)));
         // The server returns capabilities in their stored form.
-        server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "ag", "capabilities", List.of("tool.search_web", "invoices.*"))));
-        assertThat(agent.hasCapability("tool:search_web")).isTrue();   // spelled as registered
-        assertThat(agent.hasCapability("tool.search_web")).isTrue();   // stored form
-        assertThat(agent.hasCapability("invoices.approve")).isTrue();  // through invoices.*
-        assertThat(agent.hasCapability("Invoices:Read:Draft")).isTrue();
+        server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "ag", "capabilities", List.of("web:search", "invoices:*"))));
+        assertThat(agent.hasCapability("web:search")).isTrue();        // stored form
+        assertThat(agent.hasCapability("web.search")).isTrue();        // '.' is folded into ':'
+        assertThat(agent.hasCapability("invoices:approve")).isTrue();  // through invoices:*
+        assertThat(agent.hasCapability("Invoices.Read.Draft")).isTrue();
         assertThat(agent.hasCapability("invoices")).isFalse();         // a wildcard never covers its prefix
-        agent.requireCapability("tool:search_web");
-        assertThatThrownBy(() -> agent.requireCapability("tool:send_email"))
+        assertThat(agent.hasCapability("web-search")).isFalse();       // '-' is part of a name
+        agent.requireCapability("web:search");
+        assertThatThrownBy(() -> agent.requireCapability("email:send"))
             .isInstanceOf(LumoAuthPermissionDeniedException.class);
     }
 
@@ -137,14 +138,14 @@ class LumoAgentTest {
     @Test
     void capabilityAndBudgetGuards() {
         server.on("/orgs/acme/api/v1/oauth/token", Reply.json(Map.of("access_token", "T", "expires_in", 3600)));
-        server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "ag", "agent_id", "ag", "capabilities", List.of("tool:search"),
+        server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "ag", "agent_id", "ag", "capabilities", List.of("web:search"),
             "budget_policy", Map.of("max_tokens_per_day", 100, "tokens_used_today", 100))));
-        agent.requireCapability("tool:search");
-        assertThat(agent.hasCapability("tool:email")).isFalse();
-        assertThatThrownBy(() -> agent.requireCapability("tool:email"))
+        agent.requireCapability("web:search");
+        assertThat(agent.hasCapability("email:send")).isFalse();
+        assertThatThrownBy(() -> agent.requireCapability("email:send"))
             .isInstanceOf(LumoAuthPermissionDeniedException.class)
             .satisfies(e -> assertThat(((LumoAuthPermissionDeniedException) e).statusCode()).isZero())
-            .hasMessageContaining("tool:email");
+            .hasMessageContaining("email:send");
         assertThatThrownBy(agent::checkBudget).isInstanceOf(LumoAuthBudgetExceededException.class)
             .satisfies(e -> assertThat(((LumoAuthBudgetExceededException) e).budget().maxTokensPerDay()).isEqualTo(100));
         // Info is cached: one userinfo call so far.

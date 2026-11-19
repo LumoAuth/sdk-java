@@ -22,7 +22,7 @@ import java.util.Map;
  * and registration.
  *
  * <pre>{@code
- * AgentAskResult decision = lumo.agents().ask("document.read", Map.of("id", "doc_99"));
+ * AgentAskResult decision = lumo.agents().ask("document:read", Map.of("id", "doc_99"));
  * if (!decision.allowed()) { throw new IllegalStateException(decision.reason()); }
  * }</pre>
  */

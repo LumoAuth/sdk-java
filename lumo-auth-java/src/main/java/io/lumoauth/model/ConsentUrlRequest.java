@@ -7,12 +7,12 @@ import java.util.List;
  *
  * @param clientId    the agent's OAuth client. Required.
  * @param redirectUri where consent returns the user. Required.
- * @param scopes      the permissions being requested; defaults to ["read:documents"].
+ * @param scopes      the scopes being requested; defaults to ["documents:read"].
  * @param state       the CSRF token echoed back to the redirect URI.
  */
 public record ConsentUrlRequest(String clientId, String redirectUri, List<String> scopes, String state) {
 
-    public static final List<String> DEFAULT_SCOPES = List.of("read:documents");
+    public static final List<String> DEFAULT_SCOPES = List.of("documents:read");
 
     public ConsentUrlRequest {
         scopes = scopes == null || scopes.isEmpty() ? DEFAULT_SCOPES : Models.list(scopes);

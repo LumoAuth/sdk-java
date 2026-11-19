@@ -12,7 +12,7 @@ import java.util.Map;
  * <pre>{@code
  * RegisterAgentRequest.builder("Document Analyser", clientId)
  *     .description("Summarises documents")
- *     .capabilities(List.of("read:documents", "tool:search_web"))
+ *     .capabilities(List.of("documents:read", "web:search"))
  *     .jwksUri("https://agent.example.com/.well-known/jwks.json")
  *     .build();
  * }</pre>
@@ -20,7 +20,7 @@ import java.util.Map;
  * @param name         the human-readable agent name. Required.
  * @param clientId     the OAuth client identifying the agent. Required.
  * @param description  what the agent is for.
- * @param capabilities the slugs the agent declares.
+ * @param capabilities the capabilities the agent declares, written {@code <resource>:<action>}.
  * @param jwksUri      the agent's public JWKS; required for AAuth and proof-of-possession flows.
  */
 public record RegisterAgentRequest(String name, String clientId, String description, List<String> capabilities, String jwksUri) {

@@ -38,8 +38,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * <pre>{@code
  * LumoAgent agent = LumoAgent.fromEnvironment(); // AGENT_CLIENT_ID, AGENT_CLIENT_SECRET, LUMOAUTH_*
  *
- * boolean allowed = agent.isAllowed("document.read", Map.of("id", "doc_99"));
- * agent.requireCapability("tool:search_web");     // throws LumoAuthPermissionDeniedException
+ * boolean allowed = agent.isAllowed("document:read", Map.of("id", "doc_99"));
+ * agent.requireCapability("web:search");          // throws LumoAuthPermissionDeniedException
  * ApprovalResult approval = agent.approvals().require(
  *     ApprovalRequest.builder("wire-001", "Wire $4,500 to INV-7741", "ada@acme.com")
  *         .impact(ApprovalImpact.HIGH).build());
@@ -301,8 +301,8 @@ public final class LumoAgent implements ConfidentialClient {
 
     /**
      * Whether the agent holds a capability. Names match as on the server:
-     * {@code "tool:search_web"} matches the stored {@code tool.search_web}, and a
-     * held {@code tool.*} covers it (see {@link Capabilities#covers}). This checks
+     * {@code "Web:Search"} matches the held {@code web:search}, and a
+     * held {@code web:*} covers it (see {@link Capabilities#covers}). This checks
      * only the agent's registered capabilities; the Ask API ({@link #ask}) also
      * applies your policies and the token's scope.
      */
@@ -316,7 +316,7 @@ public final class LumoAgent implements ConfidentialClient {
      * (with status 0, since no request was made) when it does not.
      *
      * <pre>{@code
-     * agent.requireCapability("tool:search_web");
+     * agent.requireCapability("web:search");
      * }</pre>
      */
     public void requireCapability(String capability) {

@@ -44,13 +44,13 @@ class LumoAuthSecurityAutoConfigurationTest {
     @Test
     void introspectorResolvesUserinfoToAPrincipal() {
         server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "u1", "email", "a@b", "roles", List.of("admin"),
-            "capabilities", List.of("tool:x"))));
+            "capabilities", List.of("documents:read"))));
         runner.run(context -> {
             assertThat(context).hasSingleBean(OpaqueTokenIntrospector.class).hasBean("lumo").hasSingleBean(PermissionEvaluator.class);
             OAuth2AuthenticatedPrincipal principal = context.getBean(OpaqueTokenIntrospector.class).introspect("TOKEN");
             assertThat(principal.getName()).isEqualTo("u1");
             assertThat(principal.getAttributes()).containsEntry("email", "a@b");
-            assertThat(principal.getAuthorities()).extracting(Object::toString).containsExactly("ROLE_admin", "CAPABILITY_tool:x");
+            assertThat(principal.getAuthorities()).extracting(Object::toString).containsExactly("ROLE_admin", "CAPABILITY_documents:read");
             assertThat(server.last().header("Authorization")).isEqualTo("Bearer TOKEN");
             assertThat(server.last().header("X-API-Key")).isNull();
 

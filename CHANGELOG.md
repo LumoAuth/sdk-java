@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Changed:** capability matching (`io.lumoauth.Capabilities`, `LumoAgent.hasCapability` and
+  `requireCapability`) follows the server's `<resource>:<action>` form, such as `invoices:read`
+  and `invoices:*`. LumoAuth refuses the dot form (`invoices.read`) when you register a
+  capability, request a scope for its API or call `ask` as an agent; the matcher reads a `.` as
+  `:` only when it compares, for example with a dotted permission slug. A `-` is now part of a
+  name: `invoices-read` no longer matches `invoices:read`, and `invoices:*` no longer covers
+  `invoices-archive:read`.
+- **Changed:** `ConsentUrlRequest.DEFAULT_SCOPES` (the delegation consent scope when none is
+  given) is now `documents:read` (was `read:documents`), resource first like every other scope.
+
 ## 1.5.0 — 2026-11-13
 
 - **Fixed:** the route `web.magicLink` (`Routes.WEB_MAGIC_LINK`) now points to

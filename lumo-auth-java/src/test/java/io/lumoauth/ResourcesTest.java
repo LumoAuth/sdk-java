@@ -192,7 +192,7 @@ class ResourcesTest {
         assertThat(server.last().header("X-API-Key")).isNull();
 
         server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "u1", "email", "a@b", "roles", List.of("admin"),
-            "agent_id", "ag", "capabilities", List.of("tool:x"), "budget_policy", Map.of("max_tokens_per_day", 10, "tokens_used_today", 10), "custom", 1)));
+            "agent_id", "ag", "capabilities", List.of("documents:read"), "budget_policy", Map.of("max_tokens_per_day", 10, "tokens_used_today", 10), "custom", 1)));
         UserInfo info = lumo.auth().userinfo();
         assertThat(info.isAgent()).isTrue();
         assertThat(info.roles()).containsExactly("admin");
@@ -204,9 +204,9 @@ class ResourcesTest {
     @Test
     void agents() {
         server.on("/orgs/acme/api/v1/agents/ask", Reply.json(Map.of("allowed", false, "reason", "no", "audit_id", "au")));
-        assertThat(lumo.agents().ask("send_email", Map.of("to", "x")).reason()).isEqualTo("no");
-        assertThat(server.last().json()).containsEntry("action", "send_email").containsEntry("context", Map.of("to", "x"));
-        assertThat(lumo.agents().isAllowed("send_email")).isFalse();
+        assertThat(lumo.agents().ask("email:send", Map.of("to", "x")).reason()).isEqualTo("no");
+        assertThat(server.last().json()).containsEntry("action", "email:send").containsEntry("context", Map.of("to", "x"));
+        assertThat(lumo.agents().isAllowed("email:send")).isFalse();
         assertThat(server.last().json()).doesNotContainKey("context");
         assertThatThrownBy(() -> lumo.agents().ask("")).isInstanceOf(LumoAuthValidationException.class);
 
@@ -217,8 +217,8 @@ class ResourcesTest {
         assertThat(server.last().json()).containsEntry("client_id", "cid").containsEntry("jwks_uri", "https://j").containsEntry("capabilities", List.of("c"));
         assertThatThrownBy(() -> lumo.agents().register(RegisterAgentRequest.builder("", "cid").build())).hasMessageContaining("name");
 
-        server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "u1", "capabilities", List.of("tool:x"))));
-        assertThat(lumo.agents().capabilities()).containsExactly("tool:x");
+        server.on("/orgs/acme/api/v1/oauth/userinfo", Reply.json(Map.of("sub", "u1", "capabilities", List.of("documents:read"))));
+        assertThat(lumo.agents().capabilities()).containsExactly("documents:read");
         assertThat(lumo.agents().budget().exhausted()).isFalse();
     }
 
@@ -359,7 +359,7 @@ class ResourcesTest {
     @Test
     void delegationAndMcp() {
         String url = lumo.delegation().consentUrl(ConsentUrlRequest.of("cid", "https://cb").state("s"));
-        assertThat(url).contains("scope=read%3Adocuments").contains("prompt=consent").contains("access_type=offline").contains("state=s");
+        assertThat(url).contains("scope=documents%3Aread").contains("prompt=consent").contains("access_type=offline").contains("state=s");
         server.on("/orgs/acme/api/v1/oauth/token", Reply.json(Map.of("access_token", "D")));
         assertThat(lumo.delegation().exchange("SUB", "ACT", "r").accessToken()).isEqualTo("D");
         assertThat(server.last().form()).containsEntry("scope", "r").containsEntry("grant_type", DelegationResource.class.getName().isEmpty() ? "" : "urn:ietf:params:oauth:grant-type:token-exchange");

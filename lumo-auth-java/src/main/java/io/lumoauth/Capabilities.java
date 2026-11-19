@@ -5,18 +5,23 @@ import java.util.Collection;
 /**
  * Agent capability matching, exactly as the LumoAuth server does it.
  *
- * <p>The server stores every capability in one form and matches it with two
- * wildcards, so comparing capability strings with {@code equals} gets both
- * wrong: {@code tool:search_web} is stored as {@code tool.search_web}, and
- * {@code invoices.*} covers {@code invoices.read}.
+ * <p>A capability is one of the agent's OAuth scope values, in the form
+ * {@code <resource>:<action>} ({@code invoices:read}, {@code web:search}).
+ * LumoAuth refuses the dot form ({@code invoices.read}) when a capability is
+ * registered or a scope is requested for its API. The server compares
+ * capabilities in one canonical form with two wildcards, so comparing
+ * capability strings with {@code equals} gets both wrong: a dotted permission
+ * slug such as {@code invoices.read} compares equal to {@code invoices:read},
+ * and {@code invoices:*} covers {@code invoices:read}.
  *
  * <ul>
- *   <li><b>Stored form.</b> Trimmed, ASCII letters lower-cased, {@code :} and
- *       {@code -} turned into {@code .}, runs of {@code .} collapsed, {@code .}
- *       trimmed from both ends.</li>
+ *   <li><b>Canonical form</b> (used only to compare). Trimmed, ASCII letters
+ *       lower-cased, {@code .} turned into {@code :}, runs of {@code :}
+ *       collapsed, {@code :} trimmed from both ends. A {@code -} is part of a
+ *       name ({@code pull-requests:comment}), not a separator.</li>
  *   <li><b>Wildcards.</b> {@code *} covers every action. A name that ends in
- *       {@code .*} covers every action under that prefix, at any depth, but not
- *       the prefix itself: {@code invoices.*} covers {@code invoices.read},
+ *       {@code :*} covers every action under that prefix, at any depth, but not
+ *       the prefix itself: {@code invoices:*} covers {@code invoices:read},
  *       never {@code invoices}. A {@code *} anywhere else is an ordinary
  *       character.</li>
  * </ul>
@@ -30,13 +35,17 @@ public final class Capabilities {
     /** The bare wildcard that covers every action. */
     public static final String WILDCARD = "*";
 
+    /** Separates the resource from the action, and further parts. */
+    private static final char SEPARATOR = ':';
+
     private Capabilities() {
     }
 
     /**
-     * Returns a capability in the form that the server stores it:
-     * {@code "Invoices:Read"} and {@code "invoices-read"} both become
-     * {@code "invoices.read"}. Only ASCII letters are lower-cased, as on the server.
+     * Returns a capability in the canonical form that the server compares:
+     * {@code "Invoices.Read"} and {@code "invoices::read"} both become
+     * {@code "invoices:read"}, while {@code "invoices-read"} stays as it is.
+     * Only ASCII letters are lower-cased, as on the server.
      */
     public static String normalize(String capability) {
         if (capability == null) {
@@ -51,30 +60,30 @@ public final class Capabilities {
             end--;
         }
         StringBuilder out = new StringBuilder(end - start);
-        boolean lastDot = false;
+        boolean lastSeparator = false;
         for (int i = start; i < end; i++) {
             char c = capability.charAt(i);
             if (c >= 'A' && c <= 'Z') {
                 c = (char) (c + ('a' - 'A'));
-            } else if (c == ':' || c == '-') {
-                c = '.';
+            } else if (c == '.') {
+                c = SEPARATOR;
             }
-            if (c == '.') {
-                if (lastDot) {
+            if (c == SEPARATOR) {
+                if (lastSeparator) {
                     continue;
                 }
-                lastDot = true;
+                lastSeparator = true;
             } else {
-                lastDot = false;
+                lastSeparator = false;
             }
             out.append(c);
         }
         int from = 0;
         int to = out.length();
-        while (from < to && out.charAt(from) == '.') {
+        while (from < to && out.charAt(from) == SEPARATOR) {
             from++;
         }
-        while (to > from && out.charAt(to - 1) == '.') {
+        while (to > from && out.charAt(to - 1) == SEPARATOR) {
             to--;
         }
         return out.substring(from, to);
@@ -82,8 +91,9 @@ public final class Capabilities {
 
     /**
      * Whether one capability covers an action, in any spelling of either.
-     * {@code covers("users:*", "USERS-DELETE")} is true;
-     * {@code covers("invoices.*", "invoices")} is false.
+     * {@code covers("users:*", "USERS.DELETE")} is true;
+     * {@code covers("invoices:*", "invoices")} and
+     * {@code covers("invoices:read", "invoices-read")} are false.
      */
     public static boolean covers(String capability, String action) {
         String cap = normalize(capability);
@@ -94,7 +104,7 @@ public final class Capabilities {
         if (cap.equals(WILDCARD) || cap.equals(act)) {
             return true;
         }
-        if (cap.endsWith(".*")) {
+        if (cap.endsWith(":*")) {
             return act.startsWith(cap.substring(0, cap.length() - 1));
         }
         return false;

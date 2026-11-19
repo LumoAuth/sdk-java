@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <pre>{@code
  * DelegationChain chain = new DelegationChain(agent, "https://agent.example.com/callback");
- * String url = chain.consentUrl("session-1", List.of("read:documents"));
+ * String url = chain.consentUrl("session-1", List.of("documents:read"));
  * // ... the user completes consent, your callback receives `code` ...
  * chain.handleConsentCallback("session-1", code);
  * Map<String, Object> docs = chain.request("session-1", "GET", "/orgs/acme/api/v1/documents", null, Map.class);

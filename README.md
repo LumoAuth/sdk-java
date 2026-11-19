@@ -174,10 +174,10 @@ Register the agent in the portal, then set `AGENT_CLIENT_ID`, `AGENT_CLIENT_SECR
 ```java
 LumoAgent agent = LumoAgent.fromEnvironment();
 
-agent.requireCapability("tool:send_email");      // throws if the agent does not hold the capability
+agent.requireCapability("email:send");           // throws if the agent does not hold the capability
 agent.checkBudget();                             // throws when the agent has used today's budget
 
-if (!agent.isAllowed("send_email", Map.of("to", "cfo@acme.com"))) {
+if (!agent.isAllowed("email:send", Map.of("to", "cfo@acme.com"))) {
     return;                                      // LumoAuth denied the action and recorded the decision
 }
 
@@ -445,7 +445,7 @@ me.sub(); me.email(); me.roles();              // typed fields for the stable cl
 me.claim("department");                        // Optional<Object> for any other claim
 me.raw();                                      // every field that the server sent
 
-TokenResponse svc   = lumo.auth().clientCredentials(clientId, clientSecret, "read:documents");
+TokenResponse svc   = lumo.auth().clientCredentials(clientId, clientSecret, "documents:read");
 TokenResponse fresh = lumo.auth().refreshToken(RefreshTokenRequest.of(refreshToken, clientId, clientSecret));
 lumo.auth().revoke(RevokeRequest.of(token).client(clientId, clientSecret));
 
@@ -529,7 +529,7 @@ SecurityFilterChain api(HttpSecurity http) throws Exception {
     return http
         .authorizeHttpRequests(a -> a
             .requestMatchers("/admin/**").hasRole("admin")
-            .requestMatchers("/tools/search").hasAuthority("CAPABILITY_tool:search_web")
+            .requestMatchers("/tools/search").hasAuthority("CAPABILITY_web:search")
             .anyRequest().authenticated())
         .oauth2ResourceServer(o -> o.opaqueToken(Customizer.withDefaults()))   // the starter supplies the introspector
         .build();
@@ -605,14 +605,14 @@ LumoAgent agent = LumoAgent.builder()
     .clientId(System.getenv("AGENT_CLIENT_ID"))
     .clientSecret(System.getenv("AGENT_CLIENT_SECRET"))
     .orgId("acme-corp")
-    .scopes("agent:act", "read:documents")
+    .scopes("agent:act", "documents:read")
     .build();
 
 AgentIdentity who = agent.identity();                 // cached; identity(true) fetches it again
 List<String> caps = agent.capabilities();
-boolean canSearch = agent.hasCapability("tool:search_web");
+boolean canSearch = agent.hasCapability("web:search");
 
-AgentAskResult verdict = agent.ask("delete_file", Map.of("path", "/finance/q4.xlsx"));
+AgentAskResult verdict = agent.ask("files:delete", Map.of("path", "/finance/q4.xlsx"));
 verdict.allowed(); verdict.reason(); verdict.auditId();
 
 // LumoAuth does not see your model calls: report their tokens and cost so that
@@ -630,11 +630,11 @@ String bearer = agent.accessToken();                   // for calls that you mak
 Two guard methods throw when their condition fails:
 
 ```java
-agent.requireCapability("tool:send_email");   // LumoAuthPermissionDeniedException
+agent.requireCapability("email:send");        // LumoAuthPermissionDeniedException
 agent.checkBudget();                          // LumoAuthBudgetExceededException
 ```
 
-`hasCapability` and `requireCapability` match names the way the server does. LumoAuth stores capabilities in lower case with `.` between the parts, so `"tool:search_web"` matches the stored `tool.search_web`. A held wildcard such as `tool.*` covers `tool.search_web`, but not `tool` itself. `Capabilities.normalize`, `Capabilities.covers` and `Capabilities.anyCovers` expose the same rules.
+`hasCapability` and `requireCapability` match names the way the server does. A capability is one of the agent's scope values, written `<resource>:<action>`; LumoAuth refuses the dot form (`web.search`) when you register a capability or request a scope. The match ignores ASCII case and reads a `.` as `:` only when it compares, so a dotted permission slug such as `web.search` matches the held `web:search`. A `-` is part of a name: `web-search` is a different capability. A held wildcard such as `web:*` covers `web:search`, but not `web` itself. `Capabilities.normalize`, `Capabilities.covers` and `Capabilities.anyCovers` expose the same rules.
 
 A `LumoAgent` also exposes the namespaces with the agent's token: `agents()`, `approvals()`, `jit()`, `delegation()`, `mcp()` and `permissions()`. `agent.client()` returns the underlying `LumoAuth`.
 
@@ -709,12 +709,12 @@ The lower-level `jit()` namespace offers the same steps one by one: `createTask`
 ```java
 DelegationChain chain = new DelegationChain(agent, "https://agent.example.com/callback");
 
-String consentUrl = chain.consentUrl("session-1", List.of("read:documents"));
+String consentUrl = chain.consentUrl("session-1", List.of("documents:read"));
 // Send the user to consentUrl. Your callback receives ?code=…
 chain.handleConsentCallback("session-1", code);
 
 Map<String, Object> docs = chain.request("session-1", "GET", "/orgs/acme-corp/api/v1/documents", null, Map.class);
-String childToken = chain.delegateToSubAgent("session-1", summariserToken, "read:documents");
+String childToken = chain.delegateToSubAgent("session-1", summariserToken, "documents:read");
 List<String> actors = chain.actorChain(childToken);   // ["agent:summariser", "agent:assistant"]
 
 chain.revoke("session-1");
@@ -739,7 +739,7 @@ TokenResponse delegated = lumo.auth().tokenExchange(
         .actorToken(agent.accessToken())
         .subjectTokenType(AuthResource.TOKEN_TYPE_ACCESS_TOKEN)
         .resource("https://api.example.com")
-        .scopes(List.of("read:documents")));
+        .scopes(List.of("documents:read")));
 ```
 
 `resource(…)` sets the RFC 8707 resource indicator. It must be an https URL, and it becomes the token's `aud`. Without it, a token for acting on a user's behalf is bound to the agent's own ID. LumoAuth does not set `aud` from `audience(…)`. `lumo.delegation().exchangeForResource(…)` is a shortcut for the same call.

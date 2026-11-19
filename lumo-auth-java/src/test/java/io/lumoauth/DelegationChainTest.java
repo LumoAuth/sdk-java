@@ -32,7 +32,7 @@ class DelegationChainTest {
 
     @Test
     void consentExchangeRequestAndRevoke() {
-        String url = chain.consentUrl("s1", List.of("read:documents"));
+        String url = chain.consentUrl("s1", List.of("documents:read"));
         assertThat(url).contains("client_id=cid").contains("state=session%3As1").contains("prompt=consent");
         assertThatThrownBy(() -> new DelegationChain(agent, null).consentUrl("s1", List.of())).isInstanceOf(LumoAuthConfigException.class);
 

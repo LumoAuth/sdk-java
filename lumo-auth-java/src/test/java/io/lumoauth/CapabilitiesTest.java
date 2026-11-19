@@ -42,16 +42,19 @@ class CapabilitiesTest {
 
     @Test
     void inlineRules() {
-        assertThat(Capabilities.normalize(" Tool:Search-Web ")).isEqualTo("tool.search.web");
-        assertThat(Capabilities.normalize("Ünits.Read")).isEqualTo("Ünits.read"); // ASCII only, as PHP strtolower
+        assertThat(Capabilities.normalize(" Web.Search ")).isEqualTo("web:search");
+        assertThat(Capabilities.normalize("Pull-Requests.Comment")).isEqualTo("pull-requests:comment"); // '-' is part of a name
+        assertThat(Capabilities.normalize("Ünits.Read")).isEqualTo("Ünits:read"); // ASCII only, as PHP strtolower
         assertThat(Capabilities.normalize(null)).isEmpty();
-        assertThat(Capabilities.covers("tool:search_web", "tool.search_web")).isTrue();
-        assertThat(Capabilities.covers("invoices.*", "invoices.read.draft")).isTrue();
-        assertThat(Capabilities.covers("invoices.*", "invoices")).isFalse();
-        assertThat(Capabilities.covers("*.read", "invoices.read")).isFalse();
+        assertThat(Capabilities.covers("web:search", "web.search")).isTrue();
+        assertThat(Capabilities.covers("invoices:*", "invoices:read:draft")).isTrue();
+        assertThat(Capabilities.covers("invoices.*", "invoices:read")).isTrue();
+        assertThat(Capabilities.covers("invoices:*", "invoices")).isFalse();
+        assertThat(Capabilities.covers("invoices:read", "invoices-read")).isFalse();
+        assertThat(Capabilities.covers("*:read", "invoices:read")).isFalse();
         assertThat(Capabilities.covers("*", "")).isFalse();
-        assertThat(Capabilities.anyCovers(Arrays.asList(null, "users.view"), "users:view")).isTrue();
-        assertThat(Capabilities.anyCovers(List.of(), "users.view")).isFalse();
-        assertThat(Capabilities.anyCovers(null, "users.view")).isFalse();
+        assertThat(Capabilities.anyCovers(Arrays.asList(null, "users:view"), "users.view")).isTrue();
+        assertThat(Capabilities.anyCovers(List.of(), "users:view")).isFalse();
+        assertThat(Capabilities.anyCovers(null, "users:view")).isFalse();
     }
 }
