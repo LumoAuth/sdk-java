@@ -1,22 +1,18 @@
 # lumo-auth-spring-boot-starter
 
-Spring Boot 3 auto-configuration for the LumoAuth Java SDK: `io.lumoauth:lumo-auth-spring-boot-starter`. It is built against Spring Boot 3.5 and brings in `lumo-auth-java`.
+Spring Boot 4 auto-configuration for the LumoAuth Java SDK: `io.lumoauth:lumo-auth-spring-boot-starter`. It is built against Spring Boot 4.1 and brings in `lumo-auth-java`.
 
 The starter creates the SDK clients as beans. It can also sign users in, accept LumoAuth bearer tokens and check permissions on your methods. The [Spring Boot section](../README.md#spring-boot-starter) of the repository README covers each feature in detail.
 
 ## Install
 
-The artifact is not on Maven Central yet. Install it from the repository root, then add the dependency:
-
-```bash
-mvn -f sdk-java/pom.xml -DskipTests install
-```
+The artifact is on Maven Central. Add the dependency:
 
 ```xml
 <dependency>
   <groupId>io.lumoauth</groupId>
   <artifactId>lumo-auth-spring-boot-starter</artifactId>
-  <version>1.0.0</version>
+  <version>1.6.0</version>
 </dependency>
 ```
 

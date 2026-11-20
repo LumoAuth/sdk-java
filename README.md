@@ -8,7 +8,7 @@
 [![lumo-auth-spring-boot-starter on Maven Central](https://img.shields.io/maven-central/v/io.lumoauth/lumo-auth-spring-boot-starter.svg?label=spring-boot-starter)](https://central.sonatype.com/artifact/io.lumoauth/lumo-auth-spring-boot-starter)
 [![CI](https://github.com/lumoauth/sdk-java/actions/workflows/ci.yml/badge.svg)](https://github.com/lumoauth/sdk-java/actions/workflows/ci.yml)
 [![Java 17+](https://img.shields.io/badge/java-17%2B-blue.svg)](#versioning-and-compatibility)
-[![Spring Boot 3](https://img.shields.io/badge/spring%20boot-3.x-6DB33F.svg)](#spring-boot-starter)
+[![Spring Boot 4](https://img.shields.io/badge/spring%20boot-4.x-6DB33F.svg)](#spring-boot-starter)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 </div>
@@ -70,26 +70,20 @@ if (lumo.permissions().check("invoice.approve")) {
 | | Version |
 |---|---|
 | Java | 17 or newer. CI tests on 17 and 21. |
-| Spring Boot (starter only) | 3.x. The starter is built against Spring Boot 3.5. |
+| Spring Boot (starter only) | 4.x. The starter is built against Spring Boot 4.1. |
 | Build tool | Maven or Gradle (Groovy or Kotlin DSL) |
 | LumoAuth | A LumoAuth organization on `https://app.lumoauth.dev` (US) or `https://eu.app.lumoauth.dev` (EU) |
 
 ## Install
 
-The project has two modules. Both use the group `io.lumoauth` and the version `1.0.0`.
+The project has two modules. Both are on Maven Central in the group `io.lumoauth`; the current version is `1.6.0`.
 
 | Module | Coordinates | Use it when |
 |---|---|---|
 | [`lumo-auth-java`](lumo-auth-java) | `io.lumoauth:lumo-auth-java` | You write any Java 17+ code: a service, a CLI, an agent, a Quarkus or Micronaut app, or a plain `main()`. It depends only on the JDK and Jackson. |
-| [`lumo-auth-spring-boot-starter`](lumo-auth-spring-boot-starter) | `io.lumoauth:lumo-auth-spring-boot-starter` | You build a Spring Boot 3 app. It brings in `lumo-auth-java`. |
+| [`lumo-auth-spring-boot-starter`](lumo-auth-spring-boot-starter) | `io.lumoauth:lumo-auth-spring-boot-starter` | You build a Spring Boot 4 app. It brings in `lumo-auth-java`. |
 
-> **Not on Maven Central yet.** The artifacts are not published to Maven Central. Until they are, install them into your local Maven repository from this repository:
->
-> ```bash
-> mvn -f sdk-java/pom.xml -DskipTests install
-> ```
-
-Then add the dependency.
+Add the dependency.
 
 <table>
 <tr><th>Maven</th><th>Gradle (Kotlin DSL)</th></tr>
@@ -100,7 +94,7 @@ Then add the dependency.
 <dependency>
   <groupId>io.lumoauth</groupId>
   <artifactId>lumo-auth-java</artifactId>
-  <version>1.0.0</version>
+  <version>1.6.0</version>
 </dependency>
 ```
 
@@ -108,7 +102,7 @@ Then add the dependency.
 <td>
 
 ```kotlin
-implementation("io.lumoauth:lumo-auth-java:1.0.0")
+implementation("io.lumoauth:lumo-auth-java:1.6.0")
 ```
 
 </td>
@@ -121,7 +115,7 @@ implementation("io.lumoauth:lumo-auth-java:1.0.0")
 <dependency>
   <groupId>io.lumoauth</groupId>
   <artifactId>lumo-auth-spring-boot-starter</artifactId>
-  <version>1.0.0</version>
+  <version>1.6.0</version>
 </dependency>
 ```
 
@@ -129,14 +123,13 @@ implementation("io.lumoauth:lumo-auth-java:1.0.0")
 <td>
 
 ```kotlin
-implementation("io.lumoauth:lumo-auth-spring-boot-starter:1.0.0")
+implementation("io.lumoauth:lumo-auth-spring-boot-starter:1.6.0")
 ```
 
 </td>
 </tr>
 </table>
 
-With Gradle, add `mavenLocal()` to your repositories while the artifacts come from your local Maven repository.
 
 ## Quick start
 
@@ -459,7 +452,7 @@ For token exchange (RFC 8693), see [Act on behalf of a user](#act-on-behalf-of-a
 
 ### Spring Boot starter
 
-The starter turns the SDK into Spring beans and connects it to Spring Security. It is built against Spring Boot 3.5 and works with Spring Boot 3.x.
+The starter turns the SDK into Spring beans and connects it to Spring Security. It is built against Spring Boot 4.1 and needs Spring Boot 4.
 
 #### Configure
 
@@ -866,7 +859,7 @@ HttpResponse<byte[]> r = lumo.requestRaw("GET", lumo.orgPath("/export"), null);
 MyType typed           = lumo.request("GET", lumo.orgPath("/something"), null, MyType.class);
 ```
 
-`orgPath("/x")` returns `/orgs/{orgId}/api/v1/x`. `apiClientConfig()` returns the base path, headers and HTTP client for the generated REST client (`io.lumoauth.client`). The generated Java client is not published yet.
+`orgPath("/x")` returns `/orgs/{orgId}/api/v1/x`. `apiClientConfig()` returns the base path, headers and HTTP client for the generated REST client (`io.lumoauth.client`). The generated Java client is `io.lumoauth:lumoauth-api-client` on Maven Central.
 
 ## Errors
 
@@ -1040,10 +1033,10 @@ The tables list each method, what it does and the credential that it needs. "Any
 
 | | Supported |
 |---|---|
-| SDK version | 1.0.0 |
+| SDK version | 1.6.0 |
 | Minimum LumoAuth server API | 1.0.0 |
 | Java | 17, 21 and newer (CI tests on 17 and 21) |
-| Spring Boot | 3.x, built against 3.5. Spring Boot 4 support is planned as starter 2.x. |
+| Spring Boot | 4.x, built against 4.1 (since 1.3.0) |
 | Runtime dependencies | `jackson-databind` only for the core; the starter adds `spring-boot-starter` |
 | Java modules | Automatic-Module-Name `io.lumoauth` and `io.lumoauth.spring` |
 

@@ -6,17 +6,13 @@ Use it to check permissions, relationships and attribute-based policies, to sign
 
 ## Install
 
-The artifact is not on Maven Central yet. Install it from the repository root, then add the dependency:
-
-```bash
-mvn -f sdk-java/pom.xml -DskipTests install
-```
+The artifact is on Maven Central. Add the dependency:
 
 ```xml
 <dependency>
   <groupId>io.lumoauth</groupId>
   <artifactId>lumo-auth-java</artifactId>
-  <version>1.0.0</version>
+  <version>1.6.0</version>
 </dependency>
 ```
 
